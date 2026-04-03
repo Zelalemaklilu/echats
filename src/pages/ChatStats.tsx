@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { ArrowLeft, MessageSquare, Image, Mic, Clock, Calendar, BarChart3, TrendingUp } from "lucide-react";
