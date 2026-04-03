@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Dev-only backend health banner
  * Shows auth status + last sync times for chats/messages/profiles

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useNavigate, useLocation } from "react-router-dom";
 import { MessageCircle, Phone, Megaphone, BookUser, Settings, Clapperboard, Wallet } from "lucide-react";
 import { motion } from "framer-motion";

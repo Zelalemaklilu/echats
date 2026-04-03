@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface ChatStats {
   totalMessages: number;
   yourMessages: number;

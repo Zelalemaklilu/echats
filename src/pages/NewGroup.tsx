@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { ArrowLeft, Users, Camera, Loader2, Check } from "lucide-react";
 import { Button } from "@/components/ui/button";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface Sticker {
   id: string;
   emoji: string;

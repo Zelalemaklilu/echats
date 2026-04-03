@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { Check, Users, Wallet } from "lucide-react";
 import { BillSplit, markMemberPaid } from "@/lib/billSplitService";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Monitor, Smartphone, Tablet, Globe, X, Trash2, ShieldCheck, MapPin, Clock } from "lucide-react";

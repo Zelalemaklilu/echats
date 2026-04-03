@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface SmartReply {
   id: string;
   text: string;

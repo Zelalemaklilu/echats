@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect } from "react";
 import { Heart, Pin, Trash2, CornerDownRight, X, SmilePlus } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

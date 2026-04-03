@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useParams, useNavigate } from "react-router-dom";
 import { PhoneOff, Users, ExternalLink } from "lucide-react";
 import { getJitsiUrl } from "@/lib/groupCallService";

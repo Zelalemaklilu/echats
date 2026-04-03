@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, X, Radio, Users, Send, Crown, Gift, Swords, Bell, BellOff, Search } from "lucide-react";

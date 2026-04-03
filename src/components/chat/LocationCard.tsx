@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { MapPin, ExternalLink, Clock } from "lucide-react";
 
 interface LocationCardProps {

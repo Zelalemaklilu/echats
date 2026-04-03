@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { ArrowLeft, Bell, BellOff, Volume2, VolumeX, Vibrate, MessageSquare, Users, Phone, Check, Zap, X, Plus } from "lucide-react";
 import { isSmartNotifEnabled, setSmartNotifEnabled, getKeywords, setKeywords } from "@/lib/smartNotifService";

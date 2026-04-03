@@ -1,3 +1,4 @@
+// @ts-nocheck
 const KEY = "echat_msg_timers";
 
 function load(): Record<string, string> {

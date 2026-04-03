@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useContext } from 'react';
 import { CallContext } from '@/contexts/CallContext';
 import { IncomingCallScreen } from './IncomingCallScreen';

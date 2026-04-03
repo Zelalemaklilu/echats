@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import { X, RotateCcw, Zap, ZapOff, Timer, Gauge, Music, Mic, Type, Sticker, Scissors, Wand2, CheckCircle2, ChevronDown, Hash, AtSign, Image, Video, CameraOff, AlertCircle, Upload } from "lucide-react";

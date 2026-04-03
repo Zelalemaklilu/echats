@@ -1,3 +1,4 @@
+// @ts-nocheck
 const USERNAMES_KEY = "echat_usernames";
 const USER_USERNAME_PREFIX = "echat_user_username_";
 

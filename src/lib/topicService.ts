@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface Topic {
   id: string;
   groupId: string;

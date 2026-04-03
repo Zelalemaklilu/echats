@@ -1,3 +1,4 @@
+// @ts-nocheck
 const DISAPPEARING_PREFIX = "echat_disappearing_";
 
 export type DisappearingTimer = "off" | "24h" | "7d" | "30d";

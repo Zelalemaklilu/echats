@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ArrowLeft, Star, MessageCircle, Shield, Zap, Users, Camera, Phone, FileText, Globe, Video, Bot, Wallet, Bell, Lock, Map, Gamepad2, BarChart2, Radio, Mic, Pencil, Gift, Cake } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";

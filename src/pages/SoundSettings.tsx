@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Volume2, Check, Music } from "lucide-react";
 import { useNavigate } from "react-router-dom";

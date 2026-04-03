@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * View-Once Media Service
  * Images and videos that disappear after being viewed

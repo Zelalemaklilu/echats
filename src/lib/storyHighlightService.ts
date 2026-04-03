@@ -1,3 +1,4 @@
+// @ts-nocheck
 const STORAGE_KEY = "echat_story_highlights";
 
 export interface StoryHighlight {

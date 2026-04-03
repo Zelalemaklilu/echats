@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useCallback, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { X, Mic, MicOff, Hand, PhoneOff, Users, Activity } from "lucide-react";

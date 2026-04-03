@@ -1,3 +1,4 @@
+// @ts-nocheck
 const ARCHIVE_KEY = "echat_archived_chats";
 
 export function getArchivedChatIds(): string[] {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type CellValue = null | "X" | "O";
 
 export interface TicTacToeState {

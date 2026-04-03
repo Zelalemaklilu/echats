@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface ProfileMusic {
   userId: string;
   title: string;

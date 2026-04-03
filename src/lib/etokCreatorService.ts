@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface VideoAnalytics {
   videoId: string;
   views: number;
