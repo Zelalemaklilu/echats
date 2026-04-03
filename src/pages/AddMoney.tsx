@@ -1,0 +1,240 @@
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { ArrowLeft, ArrowRight, Check, Loader2, Shield, Zap, CreditCard, Landmark, Banknote, Wallet } from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
+import { walletService } from "@/lib/walletService";
+import { toast } from "sonner";
+
+/* ─── Design tokens ─── */
+const BG    = "#0D0A1A";
+const CARD  = "#1A1030";
+const CARD2 = "#211540";
+const P     = "#7C3AED";
+
+/* ─── Payment methods ─── */
+const METHODS = [
+  { id: "telebirr",  label: "Telebirr",         sub: "Instant deposit",              Icon: Wallet,    iconBg: "rgba(124,58,237,0.25)",  iconColor: "#a78bfa" },
+  { id: "cbebirr",   label: "CBEBirr",           sub: "Commercial Bank of Ethiopia",  Icon: Landmark,  iconBg: "rgba(96,165,250,0.15)",   iconColor: "#60a5fa" },
+  { id: "awash",     label: "Awash Bank",        sub: "Secure bank transfer",         Icon: Banknote,  iconBg: "rgba(52,211,153,0.15)",   iconColor: "#34d399" },
+  { id: "card",      label: "Credit/Debit Card", sub: "Visa, Mastercard, Amex",       Icon: CreditCard,iconBg: "rgba(251,191,36,0.15)",   iconColor: "#fbbf24" },
+  { id: "dashen",    label: "Dashen Bank",       sub: "Fast Amole integration",       Icon: Landmark,  iconBg: "rgba(249,115,22,0.15)",   iconColor: "#fb923c" },
+];
+
+const QUICK = [100, 250, 500, 1000, 2500, 5000];
+
+const AddMoney = () => {
+  const navigate = useNavigate();
+  const [amount,  setAmount]  = useState("2500");
+  const [method,  setMethod]  = useState("telebirr");
+  const [step,    setStep]    = useState<"main" | "confirm">("main");
+  const [loading, setLoading] = useState(false);
+
+  const numeric = parseFloat(amount.replace(/,/g, "")) || 0;
+  const sel = METHODS.find(m => m.id === method)!;
+
+  const fmt = (n: number) =>
+    n.toLocaleString("en-ET", { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+
+  const handleConfirm = async () => {
+    setLoading(true);
+    try {
+      const result = await walletService.deposit(numeric, sel.label);
+      if (result.success && result.transaction) {
+        navigate("/transaction-receipt", {
+          state: {
+            transaction: {
+              type: "add_money", amount: result.transaction.amount,
+              method: result.transaction.method, transactionId: result.transaction.id,
+              timestamp: result.transaction.created_at, status: result.transaction.status,
+            },
+          },
+        });
+      } else {
+        toast.error(result.error || "Failed to add money");
+      }
+    } catch { toast.error("Failed. Please try again."); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="min-h-screen flex flex-col pb-6" style={{ background: BG }}>
+
+      {/* ── HEADER ── */}
+      <div className="flex items-center px-4 pt-12 pb-4">
+        <motion.button whileTap={{ scale: 0.88 }}
+          onClick={() => step === "main" ? navigate("/wallet") : setStep("main")}
+          className="w-9 h-9 flex items-center justify-center"
+          data-testid="button-back-add-money">
+          <ArrowLeft style={{ color: "rgba(255,255,255,0.85)", width: 22, height: 22 }} />
+        </motion.button>
+        <h1 className="flex-1 text-center font-bold text-[18px] text-white">Add Money</h1>
+        <div className="w-9" />
+      </div>
+
+      {/* ── PAGE INDICATOR DOTS ── */}
+      <div className="flex items-center justify-center gap-2 pb-6">
+        <div className="h-[4px] w-7 rounded-full" style={{ background: P }} />
+        <div className="h-[4px] w-4 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+        <div className="h-[4px] w-4 rounded-full" style={{ background: "rgba(255,255,255,0.2)" }} />
+      </div>
+
+      <AnimatePresence mode="wait">
+        {step === "main" ? (
+          <motion.div key="main" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }} className="flex-1 flex flex-col">
+
+            {/* ── AMOUNT SECTION ── */}
+            <div className="px-5 pb-5">
+              {/* ENTER AMOUNT label */}
+              <p className="text-center text-[11px] font-bold uppercase tracking-[0.2em] mb-4" style={{ color: P }}>
+                Enter Amount
+              </p>
+
+              {/* Amount display */}
+              <div className="flex items-center justify-center gap-2 mb-6">
+                <span className="text-[22px] font-bold" style={{ color: "rgba(255,255,255,0.38)" }}>ETB</span>
+                <input
+                  type="number"
+                  value={amount}
+                  onChange={e => setAmount(e.target.value)}
+                  placeholder="0"
+                  className="bg-transparent border-0 outline-none text-white font-black text-center"
+                  style={{ fontSize: 48, letterSpacing: "-0.02em", width: "220px" }}
+                  data-testid="input-add-amount"
+                />
+              </div>
+
+              {/* Quick amount chips */}
+              <div className="flex flex-wrap justify-center gap-2">
+                {QUICK.map(q => {
+                  const active = numeric === q;
+                  return (
+                    <motion.button key={q} whileTap={{ scale: 0.92 }}
+                      onClick={() => setAmount(q.toString())}
+                      className="px-5 py-2.5 rounded-full font-bold text-[14px]"
+                      style={{
+                        background: active ? P : CARD2,
+                        color: active ? "#fff" : "rgba(255,255,255,0.75)",
+                        border: `1px solid ${active ? P : "rgba(255,255,255,0.1)"}`,
+                        boxShadow: active ? `0 4px 14px rgba(124,58,237,0.45)` : "none",
+                      }}>
+                      {q >= 1000 ? q.toLocaleString() : q}
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* Separator */}
+            <div className="mx-5 mb-5" style={{ height: 1, background: "rgba(255,255,255,0.07)" }} />
+
+            {/* ── SELECT PAYMENT METHOD ── */}
+            <div className="px-5 flex-1">
+              <p className="font-bold text-[17px] text-white mb-4">Select Payment Method</p>
+
+              <div className="space-y-2.5">
+                {METHODS.map(m => {
+                  const active = method === m.id;
+                  return (
+                    <motion.button key={m.id} whileTap={{ scale: 0.98 }}
+                      onClick={() => setMethod(m.id)}
+                      className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left"
+                      style={{
+                        background: active ? "rgba(124,58,237,0.15)" : CARD,
+                        border: `1px solid ${active ? "rgba(124,58,237,0.45)" : "rgba(255,255,255,0.08)"}`,
+                      }}
+                      data-testid={`method-${m.id}`}>
+                      {/* Icon */}
+                      <div className="w-11 h-11 rounded-2xl flex items-center justify-center flex-shrink-0"
+                        style={{ background: m.iconBg }}>
+                        <m.Icon style={{ color: m.iconColor, width: 20, height: 20 }} />
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <p className="font-bold text-[15px] text-white">{m.label}</p>
+                        <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.45)" }}>{m.sub}</p>
+                      </div>
+                      {/* Radio */}
+                      <div className="w-5 h-5 rounded-full flex-shrink-0 flex items-center justify-center"
+                        style={{
+                          border: `2px solid ${active ? P : "rgba(255,255,255,0.3)"}`,
+                          background: active ? P : "transparent",
+                        }}>
+                        {active && <div className="w-2 h-2 rounded-full bg-white" />}
+                      </div>
+                    </motion.button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {/* ── CONTINUE BUTTON ── */}
+            <div className="px-5 pt-5">
+              <motion.button whileTap={{ scale: 0.97 }}
+                disabled={numeric <= 0}
+                onClick={() => numeric > 0 && setStep("confirm")}
+                className="w-full py-4 rounded-full font-bold text-[16px] text-white flex items-center justify-center gap-2"
+                style={{
+                  background: numeric > 0 ? P : "rgba(124,58,237,0.3)",
+                  boxShadow: numeric > 0 ? "0 6px 24px rgba(124,58,237,0.45)" : "none",
+                  opacity: numeric > 0 ? 1 : 0.5,
+                }}
+                data-testid="button-amount-next">
+                Continue
+                <ArrowRight style={{ width: 18, height: 18 }} />
+              </motion.button>
+            </div>
+
+          </motion.div>
+        ) : (
+          /* ── CONFIRM STEP ── */
+          <motion.div key="confirm" initial={{ opacity: 0, x: 20 }} animate={{ opacity: 1, x: 0 }} exit={{ opacity: 0, x: -20 }}
+            className="flex-1 flex flex-col px-5">
+
+            <div className="rounded-3xl overflow-hidden mb-4" style={{ background: CARD, border: "1px solid rgba(255,255,255,0.08)" }}>
+              {/* Amount hero */}
+              <div className="px-6 py-7 text-center border-b" style={{ borderColor: "rgba(255,255,255,0.07)", background: "rgba(124,58,237,0.1)" }}>
+                <p className="text-[11px] uppercase tracking-widest font-bold mb-2" style={{ color: "rgba(255,255,255,0.45)" }}>You're adding</p>
+                <p className="text-[44px] font-black text-white leading-none">
+                  {fmt(numeric)} <span className="text-[20px] font-bold" style={{ color: "rgba(255,255,255,0.45)" }}>ETB</span>
+                </p>
+                <p className="text-[12px] mt-1.5" style={{ color: "rgba(255,255,255,0.35)" }}>≈ ${(numeric / 57.5).toFixed(2)} USD</p>
+              </div>
+
+              {/* Detail rows */}
+              {[
+                { label: "Payment Method", value: sel.label },
+                { label: "Transaction Fee", value: "Free" },
+                { label: "You Receive", value: `${fmt(numeric)} ETB` },
+                { label: "Processing Time", value: "Instant" },
+              ].map((row, i, arr) => (
+                <div key={row.label} className="flex items-center justify-between px-5 py-3.5"
+                  style={{ borderBottom: i < arr.length - 1 ? "1px solid rgba(255,255,255,0.07)" : "none" }}>
+                  <span className="text-[13px]" style={{ color: "rgba(255,255,255,0.5)" }}>{row.label}</span>
+                  <span className="text-[13px] font-bold text-white">{row.value}</span>
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center gap-2 rounded-2xl px-4 py-3 mb-5"
+              style={{ background: "rgba(52,211,153,0.07)", border: "1px solid rgba(52,211,153,0.18)" }}>
+              <Shield style={{ color: "#34d399", width: 16, height: 16, flexShrink: 0 }} />
+              <p className="text-[12px]" style={{ color: "rgba(255,255,255,0.5)" }}>Secured by 256-bit encryption · No hidden fees</p>
+            </div>
+
+            <motion.button whileTap={{ scale: 0.97 }}
+              onClick={handleConfirm} disabled={loading}
+              className="w-full py-4 rounded-full font-bold text-[16px] text-white flex items-center justify-center gap-2"
+              style={{ background: P, boxShadow: "0 6px 24px rgba(124,58,237,0.45)", opacity: loading ? 0.7 : 1 }}
+              data-testid="button-confirm-add">
+              {loading
+                ? <><Loader2 style={{ width: 18, height: 18, animation: "spin 1s linear infinite" }} /> Processing…</>
+                : <><Check style={{ width: 18, height: 18 }} /> Add {numeric.toLocaleString()} ETB</>
+              }
+            </motion.button>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+};
+
+export default AddMoney;

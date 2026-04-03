@@ -1,0 +1,24 @@
+{
+  "name": "Echat",
+  "short_name": "Echat",
+  "description": "Fast, Simple, Secure Messaging",
+  "start_url": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "theme_color": "#7c3aed",
+  "background_color": "#0f0f0f",
+  "icons": [
+    {
+      "src": "/favicon.ico",
+      "sizes": "48x48",
+      "type": "image/x-icon"
+    },
+    {
+      "src": "/favicon.ico",
+      "sizes": "any",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["social", "communication"],
+  "lang": "en"
+}
