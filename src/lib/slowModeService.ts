@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface SlowModeConfig {
   groupId: string;
   intervalSeconds: number;

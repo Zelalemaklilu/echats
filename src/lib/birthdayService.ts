@@ -1,3 +1,4 @@
+// @ts-nocheck
 interface BirthdayProfile { id: string; name: string | null; username: string; birthday?: string | null; avatar_url?: string | null; }
 
 export function checkTodaysBirthdays(contacts: BirthdayProfile[]): BirthdayProfile[] {

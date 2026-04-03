@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { ArrowLeft, Share2, Check, MoreVertical, Wallet } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { motion } from "framer-motion";

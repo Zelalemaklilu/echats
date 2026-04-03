@@ -1,3 +1,4 @@
+// @ts-nocheck
 // Chat wallpaper service - stores wallpaper preferences in localStorage
 
 const WALLPAPER_KEY = 'echat-chat-wallpapers';

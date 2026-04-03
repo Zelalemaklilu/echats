@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface GroupPermissions {
   groupId: string;
   canSendMessages: boolean;

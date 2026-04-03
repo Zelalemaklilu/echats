@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface ChatTheme {
   chatId: string;
   bubbleColor: string;

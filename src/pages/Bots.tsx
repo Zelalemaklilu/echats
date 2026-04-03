@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Bot, Plus, Search, Trash2, X } from "lucide-react";

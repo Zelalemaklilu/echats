@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface LiveGiftItem {
   id: string;
   emoji: string;

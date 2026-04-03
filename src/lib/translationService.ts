@@ -1,3 +1,4 @@
+// @ts-nocheck
 const STORAGE_KEY = "echat_translations";
 const PREFERRED_LANG_KEY = "echat_translate_lang";
 

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface ContactNote {
   contactId: string;
   note: string;

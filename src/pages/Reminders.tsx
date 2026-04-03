@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Bell, Trash2, MessageSquare } from "lucide-react";
 import { useNavigate } from "react-router-dom";

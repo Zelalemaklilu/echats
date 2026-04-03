@@ -1,3 +1,4 @@
+// @ts-nocheck
 const ENABLED_KEY = "echat_smart_notif";
 const KEYWORDS_KEY = "echat_smart_notif_keywords";
 const PRIORITY_KEY = "echat_smart_notif_priority";

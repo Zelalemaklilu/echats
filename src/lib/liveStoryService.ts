@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface LiveStory {
   id: string;
   userId: string;

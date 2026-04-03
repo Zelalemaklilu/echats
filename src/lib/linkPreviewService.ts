@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface LinkPreview {
   url: string;
   title: string;

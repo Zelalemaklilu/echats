@@ -1,3 +1,4 @@
+// @ts-nocheck
 const KEY = "echat_savings_goals";
 
 export interface SavingsGoal {

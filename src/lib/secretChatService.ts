@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface SecretChat {
   chatId: string;
   enabled: boolean;

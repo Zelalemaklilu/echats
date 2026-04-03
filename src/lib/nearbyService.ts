@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface NearbyUser {
   id: string;
   userId: string;

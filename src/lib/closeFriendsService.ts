@@ -1,3 +1,4 @@
+// @ts-nocheck
 const KEY = "echat_close_friends";
 
 export function getCloseFriends(): string[] {

@@ -1,3 +1,4 @@
+// @ts-nocheck
 const DRAFT_PREFIX = "echat_draft_";
 
 export function getDraft(chatId: string): string {

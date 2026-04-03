@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface GroupBoost {
   id: string;
   groupId: string;

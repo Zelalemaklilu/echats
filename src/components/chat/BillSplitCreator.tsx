@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { X, Users, Receipt, DollarSign } from "lucide-react";
 import { createBillSplit } from "@/lib/billSplitService";

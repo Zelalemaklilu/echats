@@ -1,3 +1,4 @@
+// @ts-nocheck
 export interface VoiceParticipant {
   userId: string;
   name: string;

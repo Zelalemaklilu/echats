@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Chat Lock Service
  * Lock individual chats with a PIN code

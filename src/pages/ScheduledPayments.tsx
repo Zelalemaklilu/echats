@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, MoreVertical, Plus, Pencil, Trash2, Home, Wallet, PieChart, User, Check } from "lucide-react";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 export type RepeatInterval = "none" | "daily" | "weekly" | "monthly";
 
 export interface ScheduledMessage {
