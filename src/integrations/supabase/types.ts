@@ -92,6 +92,204 @@ export type Database = {
         }
         Relationships: []
       }
+      etok_comments: {
+        Row: {
+          author_id: string
+          created_at: string
+          id: string
+          is_pinned: boolean
+          likes: number
+          parent_id: string | null
+          text: string
+          video_id: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          likes?: number
+          parent_id?: string | null
+          text: string
+          video_id: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          id?: string
+          is_pinned?: boolean
+          likes?: number
+          parent_id?: string | null
+          text?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_comments_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etok_comments_parent_id_fkey"
+            columns: ["parent_id"]
+            isOneToOne: false
+            referencedRelation: "etok_comments"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etok_comments_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "etok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_follows: {
+        Row: {
+          created_at: string
+          follower_id: string
+          following_id: string
+        }
+        Insert: {
+          created_at?: string
+          follower_id: string
+          following_id: string
+        }
+        Update: {
+          created_at?: string
+          follower_id?: string
+          following_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_follows_follower_id_fkey"
+            columns: ["follower_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etok_follows_following_id_fkey"
+            columns: ["following_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_likes: {
+        Row: {
+          created_at: string
+          id: string
+          user_id: string
+          video_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          user_id: string
+          video_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          user_id?: string
+          video_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_likes_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "etok_likes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "etok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_videos: {
+        Row: {
+          allow_comments: boolean
+          allow_download: boolean
+          allow_duet: boolean
+          allow_stitch: boolean
+          author_id: string
+          comments: number
+          created_at: string
+          description: string
+          duration: number
+          hashtags: string[]
+          id: string
+          is_sponsored: boolean
+          likes: number
+          privacy: string
+          shares: number
+          sound_name: string
+          thumbnail_url: string | null
+          video_url: string
+          views: number
+        }
+        Insert: {
+          allow_comments?: boolean
+          allow_download?: boolean
+          allow_duet?: boolean
+          allow_stitch?: boolean
+          author_id: string
+          comments?: number
+          created_at?: string
+          description?: string
+          duration?: number
+          hashtags?: string[]
+          id?: string
+          is_sponsored?: boolean
+          likes?: number
+          privacy?: string
+          shares?: number
+          sound_name?: string
+          thumbnail_url?: string | null
+          video_url: string
+          views?: number
+        }
+        Update: {
+          allow_comments?: boolean
+          allow_download?: boolean
+          allow_duet?: boolean
+          allow_stitch?: boolean
+          author_id?: string
+          comments?: number
+          created_at?: string
+          description?: string
+          duration?: number
+          hashtags?: string[]
+          id?: string
+          is_sponsored?: boolean
+          likes?: number
+          privacy?: string
+          shares?: number
+          sound_name?: string
+          thumbnail_url?: string | null
+          video_url?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_videos_author_id_fkey"
+            columns: ["author_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       group_members: {
         Row: {
           group_id: string
@@ -423,6 +621,45 @@ export type Database = {
           },
         ]
       }
+      typing_indicators: {
+        Row: {
+          chat_id: string
+          id: string
+          is_typing: boolean | null
+          updated_at: string | null
+          user_id: string
+        }
+        Insert: {
+          chat_id: string
+          id?: string
+          is_typing?: boolean | null
+          updated_at?: string | null
+          user_id: string
+        }
+        Update: {
+          chat_id?: string
+          id?: string
+          is_typing?: boolean | null
+          updated_at?: string | null
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "typing_indicators_chat_id_fkey"
+            columns: ["chat_id"]
+            isOneToOne: false
+            referencedRelation: "chats"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "typing_indicators_user_id_fkey"
+            columns: ["user_id"]
+            isOneToOne: false
+            referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       user_stories: {
         Row: {
           background_color: string | null
@@ -462,11 +699,159 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_terms_acceptance: {
+        Row: {
+          accepted_at: string
+          id: string
+          ip_address: string | null
+          terms_version: string
+          user_agent: string | null
+          user_id: string
+        }
+        Insert: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          terms_version?: string
+          user_agent?: string | null
+          user_id: string
+        }
+        Update: {
+          accepted_at?: string
+          id?: string
+          ip_address?: string | null
+          terms_version?: string
+          user_agent?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
+      wallet_transactions: {
+        Row: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          completed_at: string | null
+          counterparty_name: string | null
+          counterparty_wallet_id: string | null
+          created_at: string
+          description: string | null
+          fee: number
+          id: string
+          idempotency_key: string | null
+          metadata: Json | null
+          reference_id: string | null
+          status: Database["public"]["Enums"]["wallet_transaction_status"]
+          type: Database["public"]["Enums"]["wallet_transaction_type"]
+          wallet_id: string
+        }
+        Insert: {
+          amount: number
+          balance_after: number
+          balance_before: number
+          completed_at?: string | null
+          counterparty_name?: string | null
+          counterparty_wallet_id?: string | null
+          created_at?: string
+          description?: string | null
+          fee?: number
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          reference_id?: string | null
+          status?: Database["public"]["Enums"]["wallet_transaction_status"]
+          type: Database["public"]["Enums"]["wallet_transaction_type"]
+          wallet_id: string
+        }
+        Update: {
+          amount?: number
+          balance_after?: number
+          balance_before?: number
+          completed_at?: string | null
+          counterparty_name?: string | null
+          counterparty_wallet_id?: string | null
+          created_at?: string
+          description?: string | null
+          fee?: number
+          id?: string
+          idempotency_key?: string | null
+          metadata?: Json | null
+          reference_id?: string | null
+          status?: Database["public"]["Enums"]["wallet_transaction_status"]
+          type?: Database["public"]["Enums"]["wallet_transaction_type"]
+          wallet_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "wallet_transactions_counterparty_wallet_id_fkey"
+            columns: ["counterparty_wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "wallet_transactions_wallet_id_fkey"
+            columns: ["wallet_id"]
+            isOneToOne: false
+            referencedRelation: "wallets"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      wallets: {
+        Row: {
+          balance: number
+          created_at: string
+          currency: string
+          daily_limit: number
+          id: string
+          monthly_limit: number
+          pin_hash: string | null
+          status: Database["public"]["Enums"]["wallet_status"]
+          terms_accepted: boolean
+          terms_accepted_at: string | null
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          daily_limit?: number
+          id?: string
+          monthly_limit?: number
+          pin_hash?: string | null
+          status?: Database["public"]["Enums"]["wallet_status"]
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          created_at?: string
+          currency?: string
+          daily_limit?: number
+          id?: string
+          monthly_limit?: number
+          pin_hash?: string | null
+          status?: Database["public"]["Enums"]["wallet_status"]
+          terms_accepted?: boolean
+          terms_accepted_at?: string | null
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
     }
     Functions: {
+      find_or_create_chat: {
+        Args: { user1_id: string; user2_id: string }
+        Returns: string
+      }
       get_public_profile: {
         Args: { profile_id: string }
         Returns: {
@@ -480,9 +865,56 @@ export type Database = {
           username: string
         }[]
       }
+      get_user_wallet: {
+        Args: { p_user_id: string }
+        Returns: {
+          balance: number
+          created_at: string
+          currency: string
+          daily_limit: number
+          id: string
+          monthly_limit: number
+          status: Database["public"]["Enums"]["wallet_status"]
+          terms_accepted: boolean
+          user_id: string
+        }[]
+      }
+      get_wallet_balance: { Args: { p_wallet_id: string }; Returns: number }
+      has_accepted_wallet_terms: {
+        Args: { p_user_id: string }
+        Returns: boolean
+      }
+      search_users_public: {
+        Args: { search_term: string }
+        Returns: {
+          avatar_url: string
+          bio: string
+          id: string
+          is_active: boolean
+          is_online: boolean
+          last_seen: string
+          name: string
+          username: string
+        }[]
+      }
     }
     Enums: {
-      [_ in never]: never
+      wallet_status: "active" | "suspended" | "pending_activation"
+      wallet_transaction_status:
+        | "pending"
+        | "completed"
+        | "failed"
+        | "cancelled"
+        | "reversed"
+      wallet_transaction_type:
+        | "deposit"
+        | "withdrawal"
+        | "transfer_in"
+        | "transfer_out"
+        | "payment"
+        | "refund"
+        | "bonus"
+        | "fee"
     }
     CompositeTypes: {
       [_ in never]: never
@@ -609,6 +1041,25 @@ export type CompositeTypes<
 
 export const Constants = {
   public: {
-    Enums: {},
+    Enums: {
+      wallet_status: ["active", "suspended", "pending_activation"],
+      wallet_transaction_status: [
+        "pending",
+        "completed",
+        "failed",
+        "cancelled",
+        "reversed",
+      ],
+      wallet_transaction_type: [
+        "deposit",
+        "withdrawal",
+        "transfer_in",
+        "transfer_out",
+        "payment",
+        "refund",
+        "bonus",
+        "fee",
+      ],
+    },
   },
 } as const
