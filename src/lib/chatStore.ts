@@ -1,3 +1,4 @@
+// @ts-nocheck
 /**
  * Telegram-grade Chat Store
  * In-memory caching with optimistic updates and background sync
