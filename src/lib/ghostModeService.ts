@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Ghost Mode Service
  * Read messages without sending read receipts

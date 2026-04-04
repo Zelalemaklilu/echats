@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Notification sound customization service
 
 const SOUND_KEY = 'echat-notification-sounds';

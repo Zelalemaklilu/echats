@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { Zap, ChevronRight, Trophy } from "lucide-react";
 import { Button } from "@/components/ui/button";

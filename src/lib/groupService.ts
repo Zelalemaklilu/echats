@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Group Chat Service
  * Handles group creation, membership, and messaging

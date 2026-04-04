@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { createContext, useContext, useState, useEffect, useCallback } from "react";
 
 type Theme = "dark" | "light";

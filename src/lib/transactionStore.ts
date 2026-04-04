@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface Transaction {
   id: string;
   type: "received" | "sent" | "request" | "add_money";

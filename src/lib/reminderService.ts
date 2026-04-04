@@ -1,4 +1,3 @@
-// @ts-nocheck
 const KEY = "echat_reminders";
 
 export interface Reminder {

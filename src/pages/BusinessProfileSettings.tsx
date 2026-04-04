@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Briefcase, Clock, MapPin, Phone, Globe, MessageSquare, Moon, Check } from "lucide-react";
 import { Switch } from "@/components/ui/switch";

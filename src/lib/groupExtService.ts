@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Group Extension Service
  * localStorage-based enhancements for group chats:

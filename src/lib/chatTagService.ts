@@ -1,4 +1,3 @@
-// @ts-nocheck
 export type TagColor = "red" | "orange" | "yellow" | "green" | "blue" | "purple" | "pink" | "gray";
 
 export interface ChatTag {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { ArrowLeft, MoreHorizontal, Settings, Pin, PinOff, Share2, MessageSquare, Edit3, Link, CheckCircle2, BarChart2, Lock, Grid3X3, Heart, Bookmark } from "lucide-react";

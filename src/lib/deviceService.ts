@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface DeviceSession {
   id: string;
   userId: string;

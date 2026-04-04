@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from "react";
 import { MapPin, Radio, Check, X, Navigation, Wifi } from "lucide-react";
 import { Switch } from "@/components/ui/switch";

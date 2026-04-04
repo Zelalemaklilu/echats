@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface QuickReply {
   id: string;
   shortcut: string;

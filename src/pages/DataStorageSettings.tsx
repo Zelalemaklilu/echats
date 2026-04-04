@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Database, HardDrive, Download, Trash2, FileDown, Image, Video, File as FileIcon, Check, Loader2 } from "lucide-react";
 import { Switch } from "@/components/ui/switch";

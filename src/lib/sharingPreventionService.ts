@@ -1,4 +1,3 @@
-// @ts-nocheck
 const STORAGE_KEY = "echat_sharing_prevention";
 
 interface SharingPreventionSettings {

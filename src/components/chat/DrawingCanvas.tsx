@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useRef, useState, useEffect } from "react";
 import { X, Trash2, Send, Loader2, Minus, Plus } from "lucide-react";
 import { uploadChatImage } from "@/lib/supabaseStorage";

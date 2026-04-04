@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useCallback, useEffect, useMemo } from "react";
 import { chatStore } from "@/lib/chatStore";
 import { useAuth } from "@/contexts/AuthContext";

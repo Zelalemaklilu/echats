@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { WifiOff } from "lucide-react";
 import { useNetworkStatus } from "@/hooks/useNetworkStatus";
 

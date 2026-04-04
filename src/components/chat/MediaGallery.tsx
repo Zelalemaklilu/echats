@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { Image as ImageIcon, FileIcon, Play, X, Loader2 } from "lucide-react";
