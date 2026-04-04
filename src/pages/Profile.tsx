@@ -13,6 +13,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { motion } from "framer-motion";
 import { getProfile, updateProfile, Profile as ProfileType } from "@/lib/supabaseService";
 import { isUsernameUnique } from "@/lib/supabaseAuth";
 import { getSessionUserSafe } from "@/lib/authSession";
