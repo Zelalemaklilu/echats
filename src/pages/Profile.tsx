@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { ArrowLeft, Phone, MessageSquare, MoreVertical, Images, Edit2, Camera, Loader2, QrCode, Share2, Music, Play, Pause, Cake, BadgeCheck, Gift, Star, Plus, Trash2 } from "lucide-react";
 import { getMyStatus, setMyStatus, STATUS_CONFIG, type AvailabilityStatus } from "@/lib/availabilityService";

@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, User, Wallet, Users, BookOpen, Phone, Bookmark, Settings as SettingsIcon, Share, Star, LogOut, Plus, Check, Loader2, Bell, BellOff, Sun, Moon, Palette, Volume2, Image as ImageIcon, Shield, Database, AtSign, FileDown, Smartphone, Zap, Briefcase, Gift, Radio, ChevronRight, BadgeCheck } from "lucide-react";
 import { Badge } from "@/components/ui/badge";

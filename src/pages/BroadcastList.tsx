@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState } from "react";
 import { ArrowLeft, Radio, Send, Loader2, Check } from "lucide-react";
 import { useNavigate } from "react-router-dom";

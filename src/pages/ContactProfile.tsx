@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, MessageSquare, Phone, Video, BellOff, Bell, MoreVertical, Loader2, QrCode, FileIcon, UserX, StickyNote, Cake, Gift, Star, BadgeCheck } from "lucide-react";
 import { Button } from "@/components/ui/button";

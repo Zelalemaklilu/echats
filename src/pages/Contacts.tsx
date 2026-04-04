@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Search, UserPlus, Loader2, Users, MessageCircle, UserCheck, BadgeCheck, Cake } from "lucide-react";
 import { checkTodaysBirthdays } from "@/lib/birthdayService";

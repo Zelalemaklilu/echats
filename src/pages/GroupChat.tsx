@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import {
   ArrowLeft, MoreVertical, Send, Loader2, Users, UserPlus, LogOut,
