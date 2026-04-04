@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface LocationData {
   latitude: number;
   longitude: number;

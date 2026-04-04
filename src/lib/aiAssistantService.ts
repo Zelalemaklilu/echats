@@ -1,4 +1,3 @@
-// @ts-nocheck
 const HISTORY_KEY = "echat_ai_history";
 const MAX_HISTORY = 20;
 

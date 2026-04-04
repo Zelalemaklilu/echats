@@ -1,4 +1,3 @@
-// @ts-nocheck
 export type VerificationBadge = "official" | "press" | "business" | "government" | "premium";
 
 export interface VerifiedAccount {

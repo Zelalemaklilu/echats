@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { walletService } from "@/lib/walletService";
 
 export interface Gift {

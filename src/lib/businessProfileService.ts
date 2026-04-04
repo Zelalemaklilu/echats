@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface BusinessHours {
   day: string;
   open: string;

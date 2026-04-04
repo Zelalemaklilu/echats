@@ -1,4 +1,3 @@
-// @ts-nocheck
 const STORAGE_KEY = "echat_silent_mode";
 
 function loadSilentChats(): string[] {

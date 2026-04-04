@@ -1,4 +1,3 @@
-// @ts-nocheck
 export type VideoPrivacy = "everyone" | "friends" | "only_me";
 export type InteractionPermission = "everyone" | "friends" | "no_one";
 

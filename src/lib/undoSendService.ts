@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Undo Send Service
  * Provides a 5-second window to undo sent messages

@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, ArrowRight, Check, Loader2, Shield, Zap, CreditCard, Landmark, Banknote, Wallet } from "lucide-react";

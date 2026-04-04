@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useCallback, useRef, useEffect } from 'react';
 import { useWebRTC, CallType } from './useWebRTC';
 import { useCallSignaling, CallOffer, CallAnswer, IceCandidate, CallStateEvent } from './useCallSignaling';

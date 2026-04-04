@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { X, Link, Download, QrCode, MessageCircle, Bookmark, BookmarkCheck } from "lucide-react";
 import { motion } from "framer-motion";

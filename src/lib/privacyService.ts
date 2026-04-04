@@ -1,4 +1,3 @@
-// @ts-nocheck
 const PRIVACY_KEY = "echat_privacy_settings";
 
 export interface PrivacySettings {

@@ -1,4 +1,3 @@
-// @ts-nocheck
 export interface VideoRecordingState {
   isRecording: boolean;
   duration: number;

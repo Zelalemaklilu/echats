@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useCallback } from "react";
 import { ArrowLeft, Search, Bookmark, Trash2, Loader2, MessageSquare } from "lucide-react";
 import { Button } from "@/components/ui/button";

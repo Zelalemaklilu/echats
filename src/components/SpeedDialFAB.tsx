@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { Plus, MessageSquarePlus, Users, UserPlus, X } from "lucide-react";

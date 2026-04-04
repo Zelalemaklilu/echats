@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useRef, useEffect, useCallback } from "react";
 import { Heart, MessageCircle, Bookmark, Share2, Music, Check, VolumeX, Volume2, MoreHorizontal, Scissors, Copy, Flag, Play, Pause, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";

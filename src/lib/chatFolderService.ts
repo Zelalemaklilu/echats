@@ -1,4 +1,3 @@
-// @ts-nocheck
 const FOLDERS_KEY = "echat_chat_folders";
 const FOLDER_CHATS_PREFIX = "echat_folder_chats_";
 

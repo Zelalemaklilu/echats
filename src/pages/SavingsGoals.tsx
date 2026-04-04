@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect } from "react";
 import { ArrowLeft, Plus, Trash2, TrendingUp, Wallet, Target as TargetIcon, BarChart2, User, MoreVertical, Trophy } from "lucide-react";
 import { useNavigate } from "react-router-dom";

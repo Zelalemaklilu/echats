@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { Phone, PhoneOff, Video, MessageSquare, Clock, BellOff } from 'lucide-react';
 import { ChatAvatar } from '@/components/ui/chat-avatar';
 import { useCall } from '@/contexts/CallContext';

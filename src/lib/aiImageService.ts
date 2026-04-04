@@ -1,4 +1,3 @@
-// @ts-nocheck
 export async function generateImage(prompt: string): Promise<string> {
   const apiKey = import.meta.env.VITE_OPENAI_API_KEY;
   if (apiKey) {

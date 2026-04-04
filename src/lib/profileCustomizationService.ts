@@ -1,4 +1,3 @@
-// @ts-nocheck
 // Profile customization service - accent colors, themes
 
 const ACCENT_KEY = 'echat-accent-color';

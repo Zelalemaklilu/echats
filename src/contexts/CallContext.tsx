@@ -1,4 +1,3 @@
-// @ts-nocheck
 import React, { createContext, useContext, useEffect, useState, ReactNode } from 'react';
 import { useCallManager, CallState, ActiveCall } from '@/hooks/useCallManager';
 import { CallType } from '@/hooks/useWebRTC';

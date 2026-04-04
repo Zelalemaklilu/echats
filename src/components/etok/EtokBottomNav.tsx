@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useNavigate, useLocation } from "react-router-dom";
 import { Home, Search, User, Plus, MessageSquare } from "lucide-react";
 import { cn } from "@/lib/utils";

@@ -1,4 +1,3 @@
-// @ts-nocheck
 /**
  * Saved Messages Service
  * Handles saving/unsaving messages and fetching saved messages
