@@ -13,8 +13,8 @@ export interface WalletData {
 export interface WalletTransaction {
   id: string;
   wallet_id: string;
-  transaction_type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'adjustment';
-  status: 'pending' | 'completed' | 'failed' | 'reversed';
+  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'payment' | 'refund' | 'bonus' | 'fee';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'reversed';
   amount: number;
   balance_before: number;
   balance_after: number;
@@ -135,14 +135,14 @@ class WalletService {
     const monthlyReceived = transactions
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        (t.transaction_type === 'deposit' || t.transaction_type === 'transfer_in')
+        (t.type === 'deposit' || t.type === 'transfer_in')
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
     const monthlySent = transactions
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        t.transaction_type === 'transfer_out'
+        t.type === 'transfer_out'
       )
       .reduce((sum, t) => sum + t.amount, 0);
 

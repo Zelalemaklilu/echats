@@ -54,7 +54,7 @@ const TransactionDetail = () => {
   );
   if (!transaction) return null;
 
-  const isIn    = ["transfer_in", "deposit"].includes(transaction.transaction_type);
+  const isIn    = ["transfer_in", "deposit"].includes(transaction.type);
   const meta    = transaction.metadata as Record<string, unknown> || {};
   const status  = STATUS_CFG[transaction.status] ?? STATUS_CFG.completed;
   const shortId = "TXN" + transaction.id.slice(-9).toUpperCase();

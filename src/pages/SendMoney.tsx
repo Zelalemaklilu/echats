@@ -50,7 +50,7 @@ const SendMoney = () => {
       const txns = d.transactions || [];
       const seen = new Map<string, Contact>();
       for (const t of txns) {
-        if (t.transaction_type !== "transfer_out") continue;
+        if (t.type !== "transfer_out") continue;
         const m = t.metadata as Record<string, unknown>;
         const id = String(m.recipient_id ?? "");
         const name = String(m.recipient_name ?? m.recipient_username ?? "");

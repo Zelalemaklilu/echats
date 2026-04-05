@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       .from('wallet_transactions')
       .select('*', { count: 'exact', head: true })
       .eq('wallet_id', wallet.id)
-      .eq('transaction_type', 'deposit')
+      .eq('type', 'deposit')
       .gte('created_at', oneHourAgo);
 
     if ((recentDeposits || 0) >= 5) {
@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       .from('wallet_transactions')
       .select('amount')
       .eq('wallet_id', wallet.id)
-      .eq('transaction_type', 'deposit')
+      .eq('type', 'deposit')
       .eq('status', 'completed')
       .gte('created_at', startOfDay.toISOString());
 
@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       .insert({
         wallet_id: wallet.id,
         idempotency_key: idempotency_key || null,
-        transaction_type: 'deposit',
+        type: 'deposit',
         status: 'completed',
         amount: depositAmount,
         balance_before: currentBalance,
