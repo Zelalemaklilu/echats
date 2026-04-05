@@ -65,7 +65,6 @@ Deno.serve(async (req) => {
         user_id: user.id,
         terms_version: TERMS_VERSION,
         ip_address,
-        device_hash: device_hash || null,
         user_agent: user_agent || null,
       });
 
@@ -84,8 +83,8 @@ Deno.serve(async (req) => {
         .from('wallets')
         .update({
           status: 'active',
+          terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
-          terms_version: TERMS_VERSION,
         })
         .eq('id', existingWallet.id)
         .select()
@@ -99,8 +98,8 @@ Deno.serve(async (req) => {
         .insert({
           user_id: user.id,
           status: 'active',
+          terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
-          terms_version: TERMS_VERSION,
         })
         .select()
         .single();
