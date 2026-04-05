@@ -76,8 +76,8 @@ function buildChartData(txns: WalletTransaction[]) {
     const td = new Date(t.created_at); td.setHours(0, 0, 0, 0);
     const slot = result.find(r => r.date.getTime() === td.getTime());
     if (!slot) continue;
-    if (["transfer_in", "deposit", "adjustment"].includes(t.transaction_type)) slot.income += t.amount;
-    else if (["transfer_out", "withdrawal"].includes(t.transaction_type)) slot.expense += t.amount;
+    if (["transfer_in", "deposit", "adjustment"].includes(t.type)) slot.income += t.amount;
+    else if (["transfer_out", "withdrawal"].includes(t.type)) slot.expense += t.amount;
   }
   return result.map(({ day, income, expense }) => ({ day, income: Math.round(income), expense: Math.round(expense) }));
 }
@@ -87,7 +87,7 @@ interface QuickContact { id: string; name: string; username: string; }
 function buildQuickContacts(txns: WalletTransaction[]): QuickContact[] {
   const seen = new Map<string, QuickContact>();
   for (const t of txns) {
-    if (t.transaction_type !== "transfer_out") continue;
+    if (t.type !== "transfer_out") continue;
     const m = t.metadata as Record<string, unknown>;
     const id = String(m.recipient_id ?? "");
     const name = String(m.recipient_name ?? m.recipient_username ?? "");
@@ -522,7 +522,7 @@ const Wallet = () => {
           /* ── Each transaction is its own card ── */
           <div className="space-y-2.5">
             {recentTxns.map((t, i) => {
-              const cfg = TXN_CFG[t.transaction_type] ?? { label: t.transaction_type, color: "#fff", bg: "rgba(255,255,255,0.1)", isIn: false, statusText: t.status };
+              const cfg = TXN_CFG[t.type] ?? { label: t.type, color: "#fff", bg: "rgba(255,255,255,0.1)", isIn: false, statusText: t.status };
               const meta = t.metadata as Record<string, unknown>;
               const counterparty = cfg.isIn
                 ? (meta.sender_name ? String(meta.sender_name) : null)

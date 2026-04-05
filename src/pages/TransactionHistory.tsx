@@ -84,7 +84,7 @@ const TransactionHistory = () => {
   useEffect(() => { load(); }, []);
 
   const filtered = all.filter(t => {
-    if (tab !== "all" && mapType(t.transaction_type) !== tab) return false;
+    if (tab !== "all" && mapType(t.type) !== tab) return false;
     if (search) {
       const q = search.toLowerCase();
       if (!(t.description || "").toLowerCase().includes(q) && !t.amount.toString().includes(q)) return false;
@@ -188,10 +188,10 @@ const TransactionHistory = () => {
               {/* Individual transaction cards */}
               <div className="space-y-2.5">
                 {txns.map((t, i) => {
-                  const cfg    = txnConfig(t.transaction_type);
+                  const cfg    = txnConfig(t.type);
                   const status = STATUS_CFG[t.status] ?? STATUS_CFG.completed;
                   const time   = format(new Date(t.created_at), "h:mm a");
-                  const note   = t.description || (t.transaction_type === "deposit" ? "Bank Transfer" : t.transaction_type.replace("_", " "));
+                  const note   = t.description || (t.type === "deposit" ? "Bank Transfer" : t.type.replace("_", " "));
 
                   return (
                     <motion.button
@@ -214,9 +214,9 @@ const TransactionHistory = () => {
                       {/* Name + time · note */}
                       <div className="flex-1 min-w-0">
                         <p className="font-bold text-[15px] text-white truncate">
-                          {t.description || (t.transaction_type === "deposit" ? "Wallet Top-up" :
-                           t.transaction_type === "transfer_out" ? "Sent" :
-                           t.transaction_type === "transfer_in" ? "Received" : note)}
+                          {t.description || (t.type === "deposit" ? "Wallet Top-up" :
+                           t.type === "transfer_out" ? "Sent" :
+                           t.type === "transfer_in" ? "Received" : note)}
                         </p>
                         <p className="text-[12px] mt-0.5" style={{ color: "rgba(255,255,255,0.38)" }}>
                           {time} • {note}
