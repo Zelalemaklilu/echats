@@ -98,8 +98,8 @@ Deno.serve(async (req) => {
         .insert({
           user_id: user.id,
           status: 'active',
+          terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
-          terms_version: TERMS_VERSION,
         })
         .select()
         .single();
