@@ -128,7 +128,7 @@ Deno.serve(async (req) => {
       .from('wallet_transactions')
       .select('amount')
       .eq('wallet_id', wallet.id)
-      .eq('transaction_type', 'deposit')
+      .eq('type', 'deposit')
       .eq('status', 'completed')
       .gte('created_at', startOfDay.toISOString());
 
