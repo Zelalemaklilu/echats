@@ -142,7 +142,7 @@ class WalletService {
     const monthlySent = transactions
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        t.transaction_type === 'transfer_out'
+        t.type === 'transfer_out'
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
