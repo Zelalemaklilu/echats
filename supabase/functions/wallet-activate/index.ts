@@ -65,7 +65,6 @@ Deno.serve(async (req) => {
         user_id: user.id,
         terms_version: TERMS_VERSION,
         ip_address,
-        device_hash: device_hash || null,
         user_agent: user_agent || null,
       });
 
