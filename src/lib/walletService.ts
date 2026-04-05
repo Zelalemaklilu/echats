@@ -13,8 +13,8 @@ export interface WalletData {
 export interface WalletTransaction {
   id: string;
   wallet_id: string;
-  transaction_type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'adjustment';
-  status: 'pending' | 'completed' | 'failed' | 'reversed';
+  type: 'deposit' | 'withdrawal' | 'transfer_in' | 'transfer_out' | 'payment' | 'refund' | 'bonus' | 'fee';
+  status: 'pending' | 'completed' | 'failed' | 'cancelled' | 'reversed';
   amount: number;
   balance_before: number;
   balance_after: number;
