@@ -161,7 +161,7 @@ Deno.serve(async (req) => {
       .insert({
         wallet_id: wallet.id,
         idempotency_key: idempotency_key || null,
-        transaction_type: 'deposit',
+        type: 'deposit',
         status: 'completed',
         amount: depositAmount,
         balance_before: currentBalance,

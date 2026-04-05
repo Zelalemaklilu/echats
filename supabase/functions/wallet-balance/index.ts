@@ -81,14 +81,14 @@ Deno.serve(async (req) => {
     const monthlyReceived = (transactions || [])
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        (t.transaction_type === 'deposit' || t.transaction_type === 'transfer_in')
+        (t.type === 'deposit' || t.type === 'transfer_in')
       )
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
     const monthlySent = (transactions || [])
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        t.transaction_type === 'transfer_out'
+        t.type === 'transfer_out'
       )
       .reduce((sum, t) => sum + parseFloat(t.amount), 0);
 
