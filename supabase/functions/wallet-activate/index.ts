@@ -83,8 +83,8 @@ Deno.serve(async (req) => {
         .from('wallets')
         .update({
           status: 'active',
+          terms_accepted: true,
           terms_accepted_at: new Date().toISOString(),
-          terms_version: TERMS_VERSION,
         })
         .eq('id', existingWallet.id)
         .select()
