@@ -111,7 +111,7 @@ Deno.serve(async (req) => {
       .from('wallet_transactions')
       .select('*', { count: 'exact', head: true })
       .eq('wallet_id', wallet.id)
-      .eq('transaction_type', 'deposit')
+      .eq('type', 'deposit')
       .gte('created_at', oneHourAgo);
 
     if ((recentDeposits || 0) >= 5) {
