@@ -135,7 +135,7 @@ class WalletService {
     const monthlyReceived = transactions
       .filter(t => 
         new Date(t.created_at) >= startOfMonth && 
-        (t.transaction_type === 'deposit' || t.transaction_type === 'transfer_in')
+        (t.type === 'deposit' || t.type === 'transfer_in')
       )
       .reduce((sum, t) => sum + t.amount, 0);
 
