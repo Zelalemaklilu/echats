@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowLeft, Send, Trash2, Sparkles } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Sparkles, Square } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
@@ -9,29 +9,11 @@ import {
   getHistory,
   saveHistory,
   clearHistory,
-  getAIResponse,
-  getTypingDelay,
+  streamAIResponse,
   STARTER_SUGGESTIONS,
   type AIMessage,
 } from "@/lib/aiAssistantService";
-
-function TypewriterText({ text }: { text: string }) {
-  const [displayed, setDisplayed] = useState("");
-  const idxRef = useRef(0);
-
-  useEffect(() => {
-    idxRef.current = 0;
-    setDisplayed("");
-    const interval = setInterval(() => {
-      idxRef.current += 1;
-      setDisplayed(text.slice(0, idxRef.current));
-      if (idxRef.current >= text.length) clearInterval(interval);
-    }, 12);
-    return () => clearInterval(interval);
-  }, [text]);
-
-  return <span>{displayed}</span>;
-}
+import { toast } from "sonner";
 
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
@@ -96,9 +78,9 @@ const AIAssistant = () => {
   const navigate = useNavigate();
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState("");
-  const [isTyping, setIsTyping] = useState(false);
-  const [lastAiId, setLastAiId] = useState<string | null>(null);
+  const [isStreaming, setIsStreaming] = useState(false);
   const bottomRef = useRef<HTMLDivElement>(null);
+  const abortRef = useRef(false);
 
   useEffect(() => {
     setMessages(getHistory());
@@ -106,13 +88,14 @@ const AIAssistant = () => {
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isTyping]);
+  }, [messages, isStreaming]);
 
   const handleSend = useCallback(
     async (text?: string) => {
       const msg = (text ?? input).trim();
-      if (!msg || isTyping) return;
+      if (!msg || isStreaming) return;
       setInput("");
+      abortRef.current = false;
 
       const userMsg: AIMessage = {
         id: `u_${Date.now()}`,
@@ -124,32 +107,70 @@ const AIAssistant = () => {
       const updated = [...messages, userMsg];
       setMessages(updated);
       saveHistory(updated);
+      setIsStreaming(true);
 
-      setIsTyping(true);
-      const delay = getTypingDelay(msg);
+      let assistantContent = "";
+      const assistantId = `a_${Date.now()}`;
 
-      setTimeout(async () => {
-        const response = await getAIResponse(msg, updated);
-        const aiMsg: AIMessage = {
-          id: `a_${Date.now()}`,
-          role: "assistant",
-          content: response,
-          timestamp: Date.now(),
-        };
-        const final = [...updated, aiMsg];
-        setMessages(final);
-        saveHistory(final);
-        setLastAiId(aiMsg.id);
-        setIsTyping(false);
-      }, delay);
+      await streamAIResponse({
+        messages: updated,
+        onDelta: (chunk) => {
+          if (abortRef.current) return;
+          assistantContent += chunk;
+          setMessages((prev) => {
+            const last = prev[prev.length - 1];
+            if (last?.role === "assistant" && last.id === assistantId) {
+              return prev.map((m, i) =>
+                i === prev.length - 1 ? { ...m, content: assistantContent } : m
+              );
+            }
+            return [
+              ...prev,
+              { id: assistantId, role: "assistant", content: assistantContent, timestamp: Date.now() },
+            ];
+          });
+        },
+        onDone: () => {
+          setIsStreaming(false);
+          // Save final state
+          setMessages((prev) => {
+            saveHistory(prev);
+            return prev;
+          });
+        },
+        onError: (error) => {
+          setIsStreaming(false);
+          toast.error(error);
+          // Add error message
+          const errMsg: AIMessage = {
+            id: assistantId,
+            role: "assistant",
+            content: `❌ ${error}`,
+            timestamp: Date.now(),
+          };
+          setMessages((prev) => {
+            const final = [...prev, errMsg];
+            saveHistory(final);
+            return final;
+          });
+        },
+      });
     },
-    [input, messages, isTyping]
+    [input, messages, isStreaming]
   );
+
+  const handleStop = () => {
+    abortRef.current = true;
+    setIsStreaming(false);
+    setMessages((prev) => {
+      saveHistory(prev);
+      return prev;
+    });
+  };
 
   const handleClear = () => {
     clearHistory();
     setMessages([]);
-    setLastAiId(null);
   };
 
   const isEmpty = messages.length === 0;
@@ -161,7 +182,6 @@ const AIAssistant = () => {
         <button
           onClick={() => navigate(-1)}
           className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors flex-shrink-0"
-          data-testid="button-ai-back"
         >
           <ArrowLeft className="h-5 w-5" />
         </button>
@@ -177,14 +197,15 @@ const AIAssistant = () => {
           </div>
           <div>
             <p className="font-bold text-[15px]">Echat AI</p>
-            <p className="text-xs text-emerald-500 font-medium">Always online</p>
+            <p className="text-xs text-emerald-500 font-medium">
+              {isStreaming ? "Thinking…" : "Powered by AI"}
+            </p>
           </div>
         </div>
         {!isEmpty && (
           <button
             onClick={handleClear}
             className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors"
-            data-testid="button-ai-clear"
           >
             <Trash2 className="h-4.5 w-4.5 text-muted-foreground" />
           </button>
@@ -206,7 +227,7 @@ const AIAssistant = () => {
             <div className="text-center">
               <p className="text-xl font-bold mb-1">Echat AI</p>
               <p className="text-sm text-muted-foreground max-w-xs">
-                Your intelligent assistant for translation, writing, and more.
+                Ask me anything — I can translate, write code, explain concepts, and much more.
               </p>
             </div>
             <div className="flex flex-col gap-2 w-full max-w-xs">
@@ -218,7 +239,6 @@ const AIAssistant = () => {
                   transition={{ delay: i * 0.08 }}
                   onClick={() => handleSend(s)}
                   className="px-4 py-3 rounded-2xl border border-border/60 bg-card hover:bg-muted/50 transition-colors text-sm text-left font-medium"
-                  data-testid={`ai-suggestion-${i}`}
                 >
                   {s}
                 </motion.button>
@@ -248,7 +268,7 @@ const AIAssistant = () => {
                   )}
                   <div
                     className={cn(
-                      "max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed",
+                      "max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
                       msg.role === "user"
                         ? "text-white rounded-br-sm"
                         : "bg-card border border-border/50 text-foreground rounded-bl-sm"
@@ -258,19 +278,14 @@ const AIAssistant = () => {
                         ? { background: "var(--gradient-primary)" }
                         : undefined
                     }
-                    data-testid={`ai-message-${msg.id}`}
                   >
-                    {msg.role === "assistant" && msg.id === lastAiId ? (
-                      <TypewriterText text={msg.content} />
-                    ) : (
-                      renderMarkdown(msg.content)
-                    )}
+                    {renderMarkdown(msg.content)}
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
 
-            {isTyping && (
+            {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
               <motion.div
                 initial={{ opacity: 0, y: 8 }}
                 animate={{ opacity: 1, y: 0 }}
@@ -305,14 +320,13 @@ const AIAssistant = () => {
 
       {/* Input */}
       <div className="flex-shrink-0 px-4 py-3 border-t border-border/50 pb-safe-bottom">
-        {!isEmpty && (
+        {!isEmpty && !isStreaming && (
           <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
             {STARTER_SUGGESTIONS.slice(0, 3).map((s, i) => (
               <button
                 key={i}
                 onClick={() => handleSend(s)}
                 className="px-3 py-1.5 rounded-full border border-border/60 bg-card text-xs font-medium whitespace-nowrap hover:bg-muted/50 transition-colors flex-shrink-0"
-                data-testid={`ai-chip-${i}`}
               >
                 {s}
               </button>
@@ -331,20 +345,28 @@ const AIAssistant = () => {
             }}
             placeholder="Ask me anything…"
             className="flex-1 rounded-full bg-muted border-0"
-            disabled={isTyping}
-            data-testid="input-ai-message"
+            disabled={isStreaming}
           />
           <motion.div whileTap={{ scale: 0.9 }}>
-            <Button
-              size="icon"
-              onClick={() => handleSend()}
-              disabled={!input.trim() || isTyping}
-              className="rounded-full text-white"
-              style={{ background: "var(--gradient-primary)" }}
-              data-testid="button-ai-send"
-            >
-              <Send className="h-4.5 w-4.5" />
-            </Button>
+            {isStreaming ? (
+              <Button
+                size="icon"
+                onClick={handleStop}
+                className="rounded-full bg-destructive text-destructive-foreground"
+              >
+                <Square className="h-4 w-4" />
+              </Button>
+            ) : (
+              <Button
+                size="icon"
+                onClick={() => handleSend()}
+                disabled={!input.trim()}
+                className="rounded-full text-white"
+                style={{ background: "var(--gradient-primary)" }}
+              >
+                <Send className="h-4.5 w-4.5" />
+              </Button>
+            )}
           </motion.div>
         </div>
       </div>
