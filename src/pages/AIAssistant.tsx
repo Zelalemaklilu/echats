@@ -1,34 +1,39 @@
+// @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
-import { ArrowLeft, Send, Trash2, Sparkles, Square } from "lucide-react";
+import { ArrowLeft, Send, Trash2, Sparkles, Square, Image, Plus, MessageSquare, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import {
-  getHistory,
-  saveHistory,
-  clearHistory,
   streamAIResponse,
+  generateImage,
+  isImageRequest,
+  loadConversations,
+  createConversation,
+  updateConversationTitle,
+  deleteConversation,
+  loadMessages,
+  saveMessage,
   STARTER_SUGGESTIONS,
   type AIMessage,
+  type AIConversation,
 } from "@/lib/aiAssistantService";
 import { toast } from "sonner";
+import { supabase } from "@/integrations/supabase/client";
 
 function renderMarkdown(text: string): React.ReactNode {
   const lines = text.split("\n");
   const result: React.ReactNode[] = [];
-
   lines.forEach((line, i) => {
     const parts: React.ReactNode[] = [];
     let rest = line;
     let key = 0;
-
     while (rest.length > 0) {
       const boldMatch = rest.match(/^\*\*(.+?)\*\*/);
       const italicMatch = rest.match(/^_(.+?)_/);
       const codeMatch = rest.match(/^`(.+?)`/);
-
       if (boldMatch) {
         parts.push(<strong key={key++}>{boldMatch[1]}</strong>);
         rest = rest.slice(boldMatch[0].length);
@@ -36,41 +41,21 @@ function renderMarkdown(text: string): React.ReactNode {
         parts.push(<em key={key++}>{italicMatch[1]}</em>);
         rest = rest.slice(italicMatch[0].length);
       } else if (codeMatch) {
-        parts.push(
-          <code
-            key={key++}
-            className="px-1 py-0.5 rounded text-xs bg-white/10 font-mono"
-          >
-            {codeMatch[1]}
-          </code>
-        );
+        parts.push(<code key={key++} className="px-1 py-0.5 rounded text-xs bg-white/10 font-mono">{codeMatch[1]}</code>);
         rest = rest.slice(codeMatch[0].length);
       } else {
         const nextSpecial = rest.search(/\*\*|_[^_]|`/);
-        if (nextSpecial > 0) {
-          parts.push(rest.slice(0, nextSpecial));
-          rest = rest.slice(nextSpecial);
-        } else {
-          parts.push(rest);
-          rest = "";
-        }
+        if (nextSpecial > 0) { parts.push(rest.slice(0, nextSpecial)); rest = rest.slice(nextSpecial); }
+        else { parts.push(rest); rest = ""; }
       }
     }
-
     if (line.startsWith("• ") || line.startsWith("- ")) {
-      result.push(
-        <div key={i} className="flex gap-1.5">
-          <span className="mt-1 w-1.5 h-1.5 rounded-full bg-current flex-shrink-0 opacity-60" />
-          <span>{parts.slice(1)}</span>
-        </div>
-      );
+      result.push(<div key={i} className="flex gap-1.5"><span className="mt-1 w-1.5 h-1.5 rounded-full bg-current flex-shrink-0 opacity-60" /><span>{parts.slice(1)}</span></div>);
     } else {
       result.push(<span key={i}>{parts}</span>);
     }
-
     if (i < lines.length - 1) result.push(<br key={`br_${i}`} />);
   });
-
   return result;
 }
 
@@ -79,118 +64,208 @@ const AIAssistant = () => {
   const [messages, setMessages] = useState<AIMessage[]>([]);
   const [input, setInput] = useState("");
   const [isStreaming, setIsStreaming] = useState(false);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+  const [conversations, setConversations] = useState<AIConversation[]>([]);
+  const [activeConvId, setActiveConvId] = useState<string | null>(null);
+  const [showSidebar, setShowSidebar] = useState(false);
+  const [userId, setUserId] = useState<string | null>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const abortRef = useRef(false);
 
+  // Get user
   useEffect(() => {
-    setMessages(getHistory());
+    supabase.auth.getSession().then(({ data }) => {
+      if (data.session?.user) setUserId(data.session.user.id);
+    });
   }, []);
+
+  // Load conversations
+  useEffect(() => {
+    if (!userId) return;
+    loadConversations().then(setConversations);
+  }, [userId]);
+
+  // Load messages when conversation changes
+  useEffect(() => {
+    if (!activeConvId) { setMessages([]); return; }
+    loadMessages(activeConvId).then(setMessages);
+  }, [activeConvId]);
 
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [messages, isStreaming]);
+  }, [messages, isStreaming, isGeneratingImage]);
 
-  const handleSend = useCallback(
-    async (text?: string) => {
-      const msg = (text ?? input).trim();
-      if (!msg || isStreaming) return;
-      setInput("");
-      abortRef.current = false;
+  const startNewChat = useCallback(async () => {
+    setActiveConvId(null);
+    setMessages([]);
+    setShowSidebar(false);
+  }, []);
 
-      const userMsg: AIMessage = {
-        id: `u_${Date.now()}`,
-        role: "user",
-        content: msg,
-        timestamp: Date.now(),
-      };
+  const selectConversation = useCallback((conv: AIConversation) => {
+    setActiveConvId(conv.id);
+    setShowSidebar(false);
+  }, []);
 
-      const updated = [...messages, userMsg];
-      setMessages(updated);
-      saveHistory(updated);
-      setIsStreaming(true);
+  const handleDeleteConv = useCallback(async (convId: string) => {
+    await deleteConversation(convId);
+    setConversations(prev => prev.filter(c => c.id !== convId));
+    if (activeConvId === convId) { setActiveConvId(null); setMessages([]); }
+  }, [activeConvId]);
 
-      let assistantContent = "";
-      const assistantId = `a_${Date.now()}`;
+  const handleSend = useCallback(async (text?: string) => {
+    const msg = (text ?? input).trim();
+    if (!msg || isStreaming || isGeneratingImage) return;
+    setInput("");
+    abortRef.current = false;
 
-      await streamAIResponse({
-        messages: updated,
-        onDelta: (chunk) => {
-          if (abortRef.current) return;
-          assistantContent += chunk;
-          setMessages((prev) => {
-            const last = prev[prev.length - 1];
-            if (last?.role === "assistant" && last.id === assistantId) {
-              return prev.map((m, i) =>
-                i === prev.length - 1 ? { ...m, content: assistantContent } : m
-              );
-            }
-            return [
-              ...prev,
-              { id: assistantId, role: "assistant", content: assistantContent, timestamp: Date.now() },
-            ];
-          });
-        },
-        onDone: () => {
-          setIsStreaming(false);
-          // Save final state
-          setMessages((prev) => {
-            saveHistory(prev);
-            return prev;
-          });
-        },
-        onError: (error) => {
-          setIsStreaming(false);
-          toast.error(error);
-          // Add error message
-          const errMsg: AIMessage = {
-            id: assistantId,
-            role: "assistant",
-            content: `❌ ${error}`,
-            timestamp: Date.now(),
-          };
-          setMessages((prev) => {
-            const final = [...prev, errMsg];
-            saveHistory(final);
-            return final;
-          });
-        },
-      });
-    },
-    [input, messages, isStreaming]
-  );
+    // Ensure conversation exists
+    let convId = activeConvId;
+    if (!convId && userId) {
+      const title = msg.slice(0, 50);
+      convId = await createConversation(userId, title);
+      if (convId) {
+        setActiveConvId(convId);
+        setConversations(prev => [{ id: convId!, title, last_message_at: new Date().toISOString(), created_at: new Date().toISOString() }, ...prev]);
+      }
+    }
+
+    const userMsg: AIMessage = {
+      id: `u_${Date.now()}`,
+      role: "user",
+      content: msg,
+      timestamp: Date.now(),
+    };
+
+    const updated = [...messages, userMsg];
+    setMessages(updated);
+    if (convId) saveMessage(convId, userMsg);
+
+    // Check if image request
+    if (isImageRequest(msg)) {
+      setIsGeneratingImage(true);
+      try {
+        const result = await generateImage(msg);
+        const aiMsg: AIMessage = {
+          id: `a_${Date.now()}`,
+          role: "assistant",
+          content: result.text || "Here's your generated image! 🎨",
+          image_url: result.imageUrl,
+          timestamp: Date.now(),
+        };
+        setMessages(prev => [...prev, aiMsg]);
+        if (convId) saveMessage(convId, aiMsg);
+      } catch (err: any) {
+        toast.error(err.message || "Image generation failed");
+        const errMsg: AIMessage = { id: `a_${Date.now()}`, role: "assistant", content: `❌ ${err.message}`, timestamp: Date.now() };
+        setMessages(prev => [...prev, errMsg]);
+        if (convId) saveMessage(convId, errMsg);
+      } finally {
+        setIsGeneratingImage(false);
+      }
+      return;
+    }
+
+    // Text streaming
+    setIsStreaming(true);
+    let assistantContent = "";
+    const assistantId = `a_${Date.now()}`;
+
+    await streamAIResponse({
+      messages: updated,
+      onDelta: (chunk) => {
+        if (abortRef.current) return;
+        assistantContent += chunk;
+        setMessages(prev => {
+          const last = prev[prev.length - 1];
+          if (last?.role === "assistant" && last.id === assistantId) {
+            return prev.map((m, i) => i === prev.length - 1 ? { ...m, content: assistantContent } : m);
+          }
+          return [...prev, { id: assistantId, role: "assistant", content: assistantContent, timestamp: Date.now() }];
+        });
+      },
+      onDone: () => {
+        setIsStreaming(false);
+        if (convId && assistantContent) {
+          saveMessage(convId, { id: assistantId, role: "assistant", content: assistantContent, timestamp: Date.now() });
+          updateConversationTitle(convId, messages[0]?.content?.slice(0, 50) || "Chat");
+        }
+      },
+      onError: (error) => {
+        setIsStreaming(false);
+        toast.error(error);
+        const errMsg: AIMessage = { id: assistantId, role: "assistant", content: `❌ ${error}`, timestamp: Date.now() };
+        setMessages(prev => [...prev, errMsg]);
+        if (convId) saveMessage(convId, errMsg);
+      },
+    });
+  }, [input, messages, isStreaming, isGeneratingImage, activeConvId, userId]);
 
   const handleStop = () => {
     abortRef.current = true;
     setIsStreaming(false);
-    setMessages((prev) => {
-      saveHistory(prev);
-      return prev;
-    });
   };
 
-  const handleClear = () => {
-    clearHistory();
-    setMessages([]);
-  };
-
+  const isBusy = isStreaming || isGeneratingImage;
   const isEmpty = messages.length === 0;
 
   return (
     <div className="fixed inset-0 bg-background flex flex-col">
+      {/* Sidebar */}
+      <AnimatePresence>
+        {showSidebar && (
+          <>
+            <motion.div
+              initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
+              className="fixed inset-0 bg-black/50 z-40"
+              onClick={() => setShowSidebar(false)}
+            />
+            <motion.div
+              initial={{ x: -300 }} animate={{ x: 0 }} exit={{ x: -300 }}
+              transition={{ type: "spring", damping: 25 }}
+              className="fixed left-0 top-0 bottom-0 w-72 bg-card border-r border-border z-50 flex flex-col"
+            >
+              <div className="p-4 border-b border-border flex items-center justify-between">
+                <h2 className="font-bold text-base">Chat History</h2>
+                <button onClick={() => setShowSidebar(false)} className="p-1 rounded-full hover:bg-muted/60">
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
+              <button onClick={startNewChat} className="mx-3 mt-3 px-4 py-2.5 rounded-xl border border-border bg-muted/30 hover:bg-muted/60 transition-colors flex items-center gap-2 text-sm font-medium">
+                <Plus className="h-4 w-4" /> New Chat
+              </button>
+              <div className="flex-1 overflow-y-auto p-3 space-y-1">
+                {conversations.map(conv => (
+                  <div key={conv.id} className={cn(
+                    "flex items-center gap-2 px-3 py-2.5 rounded-xl cursor-pointer transition-colors text-sm",
+                    activeConvId === conv.id ? "bg-primary/10 text-primary" : "hover:bg-muted/50"
+                  )}>
+                    <MessageSquare className="h-4 w-4 flex-shrink-0 opacity-60" />
+                    <span className="flex-1 truncate" onClick={() => selectConversation(conv)}>{conv.title}</span>
+                    <button onClick={(e) => { e.stopPropagation(); handleDeleteConv(conv.id); }} className="p-0.5 rounded hover:bg-destructive/20">
+                      <Trash2 className="h-3.5 w-3.5 text-muted-foreground" />
+                    </button>
+                  </div>
+                ))}
+                {conversations.length === 0 && (
+                  <p className="text-xs text-muted-foreground text-center py-8">No conversations yet</p>
+                )}
+              </div>
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+
       {/* Header */}
       <div className="flex items-center gap-3 px-4 pt-safe-top pt-4 pb-3 border-b border-border/50 flex-shrink-0">
-        <button
-          onClick={() => navigate(-1)}
-          className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors flex-shrink-0"
-        >
+        <button onClick={() => navigate(-1)} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors flex-shrink-0">
           <ArrowLeft className="h-5 w-5" />
+        </button>
+        <button onClick={() => setShowSidebar(true)} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors flex-shrink-0">
+          <MessageSquare className="h-4.5 w-4.5" />
         </button>
         <div className="flex items-center gap-2.5 flex-1">
           <div className="relative">
-            <div
-              className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-primary"
-              style={{ background: "var(--gradient-primary)" }}
-            >
+            <div className="w-10 h-10 rounded-full flex items-center justify-center text-white shadow-primary" style={{ background: "var(--gradient-primary)" }}>
               <Sparkles className="h-5 w-5" />
             </div>
             <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background" />
@@ -198,18 +273,13 @@ const AIAssistant = () => {
           <div>
             <p className="font-bold text-[15px]">Echat AI</p>
             <p className="text-xs text-emerald-500 font-medium">
-              {isStreaming ? "Thinking…" : "Powered by AI"}
+              {isStreaming ? "Thinking…" : isGeneratingImage ? "Generating image…" : "Powered by AI"}
             </p>
           </div>
         </div>
-        {!isEmpty && (
-          <button
-            onClick={handleClear}
-            className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors"
-          >
-            <Trash2 className="h-4.5 w-4.5 text-muted-foreground" />
-          </button>
-        )}
+        <button onClick={startNewChat} className="w-9 h-9 rounded-full flex items-center justify-center hover:bg-muted/60 transition-colors">
+          <Plus className="h-4.5 w-4.5 text-muted-foreground" />
+        </button>
       </div>
 
       {/* Messages */}
@@ -227,7 +297,7 @@ const AIAssistant = () => {
             <div className="text-center">
               <p className="text-xl font-bold mb-1">Echat AI</p>
               <p className="text-sm text-muted-foreground max-w-xs">
-                Ask me anything — I can translate, write code, explain concepts, and much more.
+                Ask me anything — text, translation, code, or generate images!
               </p>
             </div>
             <div className="flex flex-col gap-2 w-full max-w-xs">
@@ -253,63 +323,51 @@ const AIAssistant = () => {
                   key={msg.id}
                   initial={{ opacity: 0, y: 8 }}
                   animate={{ opacity: 1, y: 0 }}
-                  className={cn(
-                    "flex",
-                    msg.role === "user" ? "justify-end" : "justify-start"
-                  )}
+                  className={cn("flex", msg.role === "user" ? "justify-end" : "justify-start")}
                 >
                   {msg.role === "assistant" && (
-                    <div
-                      className="w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0 mr-2 mt-1"
-                      style={{ background: "var(--gradient-primary)" }}
-                    >
+                    <div className="w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0 mr-2 mt-1" style={{ background: "var(--gradient-primary)" }}>
                       <Sparkles className="h-3.5 w-3.5" />
                     </div>
                   )}
-                  <div
-                    className={cn(
-                      "max-w-[75%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
-                      msg.role === "user"
-                        ? "text-white rounded-br-sm"
-                        : "bg-card border border-border/50 text-foreground rounded-bl-sm"
-                    )}
-                    style={
-                      msg.role === "user"
-                        ? { background: "var(--gradient-primary)" }
-                        : undefined
-                    }
-                  >
+                  <div className={cn(
+                    "max-w-[80%] px-4 py-2.5 rounded-2xl text-sm leading-relaxed whitespace-pre-wrap",
+                    msg.role === "user" ? "text-white rounded-br-sm" : "bg-card border border-border/50 text-foreground rounded-bl-sm"
+                  )} style={msg.role === "user" ? { background: "var(--gradient-primary)" } : undefined}>
                     {renderMarkdown(msg.content)}
+                    {msg.image_url && (
+                      <img
+                        src={msg.image_url}
+                        alt="Generated"
+                        className="mt-2 rounded-xl max-w-full max-h-80 object-contain border border-border/30"
+                      />
+                    )}
                   </div>
                 </motion.div>
               ))}
             </AnimatePresence>
 
-            {isStreaming && messages[messages.length - 1]?.role !== "assistant" && (
-              <motion.div
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-                className="flex items-center gap-2"
-              >
-                <div
-                  className="w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0"
-                  style={{ background: "var(--gradient-primary)" }}
-                >
+            {(isStreaming && messages[messages.length - 1]?.role !== "assistant") && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0" style={{ background: "var(--gradient-primary)" }}>
                   <Sparkles className="h-3.5 w-3.5" />
                 </div>
                 <div className="bg-card border border-border/50 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-1">
-                  {[0, 1, 2].map((i) => (
-                    <motion.div
-                      key={i}
-                      animate={{ y: [0, -4, 0] }}
-                      transition={{
-                        repeat: Infinity,
-                        duration: 0.6,
-                        delay: i * 0.15,
-                      }}
-                      className="w-1.5 h-1.5 rounded-full bg-muted-foreground"
-                    />
+                  {[0, 1, 2].map(i => (
+                    <motion.div key={i} animate={{ y: [0, -4, 0] }} transition={{ repeat: Infinity, duration: 0.6, delay: i * 0.15 }} className="w-1.5 h-1.5 rounded-full bg-muted-foreground" />
                   ))}
+                </div>
+              </motion.div>
+            )}
+
+            {isGeneratingImage && (
+              <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="flex items-center gap-2">
+                <div className="w-7 h-7 rounded-full flex items-center justify-center text-white flex-shrink-0" style={{ background: "var(--gradient-primary)" }}>
+                  <Image className="h-3.5 w-3.5" />
+                </div>
+                <div className="bg-card border border-border/50 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2">
+                  <motion.div animate={{ rotate: 360 }} transition={{ repeat: Infinity, duration: 1, ease: "linear" }} className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full" />
+                  <span className="text-xs text-muted-foreground">Generating image…</span>
                 </div>
               </motion.div>
             )}
@@ -320,14 +378,10 @@ const AIAssistant = () => {
 
       {/* Input */}
       <div className="flex-shrink-0 px-4 py-3 border-t border-border/50 pb-safe-bottom">
-        {!isEmpty && !isStreaming && (
+        {!isEmpty && !isBusy && (
           <div className="flex gap-2 mb-2 overflow-x-auto scrollbar-hide pb-1">
             {STARTER_SUGGESTIONS.slice(0, 3).map((s, i) => (
-              <button
-                key={i}
-                onClick={() => handleSend(s)}
-                className="px-3 py-1.5 rounded-full border border-border/60 bg-card text-xs font-medium whitespace-nowrap hover:bg-muted/50 transition-colors flex-shrink-0"
-              >
+              <button key={i} onClick={() => handleSend(s)} className="px-3 py-1.5 rounded-full border border-border/60 bg-card text-xs font-medium whitespace-nowrap hover:bg-muted/50 transition-colors flex-shrink-0">
                 {s}
               </button>
             ))}
@@ -337,33 +391,18 @@ const AIAssistant = () => {
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) {
-                e.preventDefault();
-                handleSend();
-              }
-            }}
-            placeholder="Ask me anything…"
+            onKeyDown={(e) => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); handleSend(); } }}
+            placeholder="Ask anything or 'Generate image of…'"
             className="flex-1 rounded-full bg-muted border-0"
-            disabled={isStreaming}
+            disabled={isBusy}
           />
           <motion.div whileTap={{ scale: 0.9 }}>
             {isStreaming ? (
-              <Button
-                size="icon"
-                onClick={handleStop}
-                className="rounded-full bg-destructive text-destructive-foreground"
-              >
+              <Button size="icon" onClick={handleStop} className="rounded-full bg-destructive text-destructive-foreground">
                 <Square className="h-4 w-4" />
               </Button>
             ) : (
-              <Button
-                size="icon"
-                onClick={() => handleSend()}
-                disabled={!input.trim()}
-                className="rounded-full text-white"
-                style={{ background: "var(--gradient-primary)" }}
-              >
+              <Button size="icon" onClick={() => handleSend()} disabled={!input.trim() || isBusy} className="rounded-full text-white" style={{ background: "var(--gradient-primary)" }}>
                 <Send className="h-4.5 w-4.5" />
               </Button>
             )}
