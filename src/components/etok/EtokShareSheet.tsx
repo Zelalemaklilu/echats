@@ -3,7 +3,7 @@ import { X, Link, Download, QrCode, MessageCircle, Bookmark, BookmarkCheck } fro
 import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
-import { type EtokVideo, isVideoSaved, toggleSave, formatCount } from "@/lib/etokService";
+import { type EtokVideo, formatCount } from "@/lib/etokService";
 
 interface EtokShareSheetProps {
   video: EtokVideo;
@@ -23,7 +23,7 @@ const APPS = [
 ];
 
 export function EtokShareSheet({ video, currentUserId, onClose }: EtokShareSheetProps) {
-  const [saved, setSaved] = useState(() => currentUserId ? isVideoSaved(currentUserId, video.id) : false);
+  const [saved, setSaved] = useState(false);
   const [showQr, setShowQr] = useState(false);
   const [copied, setCopied] = useState(false);
 
@@ -42,10 +42,8 @@ export function EtokShareSheet({ video, currentUserId, onClose }: EtokShareSheet
   };
 
   const handleSave = () => {
-    if (!currentUserId) return;
-    const s = toggleSave(currentUserId, video.id);
-    setSaved(s);
-    toast.success(s ? "Added to favorites" : "Removed from favorites");
+    setSaved(!saved);
+    toast.success(saved ? "Removed from favorites" : "Added to favorites");
   };
 
   return (
@@ -67,50 +65,38 @@ export function EtokShareSheet({ video, currentUserId, onClose }: EtokShareSheet
       >
         <div className="w-10 h-1 bg-white/20 rounded-full mx-auto mt-3 mb-4" />
 
-        {/* Video preview row */}
         <div className="flex items-center gap-3 px-4 mb-5">
-          <div className={cn("w-10 h-14 rounded-lg bg-gradient-to-b flex items-center justify-center text-2xl flex-shrink-0", video.thumbnailColor)}>
-            {video.thumbnailEmoji}
+          <div className="w-10 h-14 rounded-lg bg-gradient-to-b from-purple-900 to-pink-900 flex items-center justify-center text-2xl flex-shrink-0">
+            🎬
           </div>
           <div className="flex-1 min-w-0">
             <p className="text-white text-[13px] font-semibold line-clamp-2">{video.description.slice(0, 60)}...</p>
             <p className="text-white/50 text-[12px] mt-0.5">{formatCount(video.views)} views · {formatCount(video.likes)} likes</p>
           </div>
           <button onClick={handleSave}>
-            {saved
-              ? <BookmarkCheck className="h-6 w-6 text-yellow-400" />
-              : <Bookmark className="h-6 w-6 text-white/60" />
-            }
+            {saved ? <BookmarkCheck className="h-6 w-6 text-yellow-400" /> : <Bookmark className="h-6 w-6 text-white/60" />}
           </button>
         </div>
 
-        {/* App grid */}
         <div className="px-4 mb-5 grid grid-cols-4 gap-4">
-          {/* Send to Chat */}
           <button onClick={() => toast.success("Opening chat...")} className="flex flex-col items-center gap-2">
             <div className="w-14 h-14 rounded-2xl bg-[#ff0050] flex items-center justify-center">
               <MessageCircle className="h-7 w-7 text-white" />
             </div>
             <span className="text-white/70 text-[11px]">Send</span>
           </button>
-
-          {/* Copy link */}
           <button onClick={handleCopy} className="flex flex-col items-center gap-2">
             <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-colors", copied ? "bg-green-600" : "bg-white/10")}>
               <Link className="h-7 w-7 text-white" />
             </div>
             <span className="text-white/70 text-[11px]">{copied ? "Copied!" : "Copy"}</span>
           </button>
-
-          {/* Download */}
           <button onClick={() => toast.success("Saved!")} className="flex flex-col items-center gap-2">
             <div className="w-14 h-14 rounded-2xl bg-white/10 flex items-center justify-center">
               <Download className="h-7 w-7 text-white" />
             </div>
             <span className="text-white/70 text-[11px]">Save</span>
           </button>
-
-          {/* QR */}
           <button onClick={() => setShowQr(!showQr)} className="flex flex-col items-center gap-2">
             <div className={cn("w-14 h-14 rounded-2xl flex items-center justify-center transition-colors", showQr ? "bg-[#ff0050]" : "bg-white/10")}>
               <QrCode className="h-7 w-7 text-white" />
@@ -119,25 +105,10 @@ export function EtokShareSheet({ video, currentUserId, onClose }: EtokShareSheet
           </button>
         </div>
 
-        {/* QR display */}
-        {showQr && (
-          <div className="mx-4 mb-4 p-4 bg-white rounded-2xl flex flex-col items-center gap-2">
-            <div className="grid grid-cols-7 gap-1">
-              {Array.from({ length: 49 }).map((_, i) => (
-                <div key={i} className={cn("w-4 h-4 rounded-sm", [0,1,2,3,4,5,6,7,14,21,28,35,42,43,44,45,46,47,48,8,15,22,29,36].includes(i) || Math.random() > 0.5 ? "bg-black" : "bg-white")} />
-              ))}
-            </div>
-            <p className="text-gray-500 text-xs">Scan to watch on Etok</p>
-          </div>
-        )}
-
-        {/* Platform row */}
         <div className="flex gap-4 px-4 overflow-x-auto pb-1">
           {APPS.map(a => (
             <button key={a.label} onClick={() => handleShare(a.label)} className="flex flex-col items-center gap-2 flex-shrink-0">
-              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: a.bg }}>
-                {a.emoji}
-              </div>
+              <div className="w-14 h-14 rounded-2xl flex items-center justify-center text-2xl" style={{ background: a.bg }}>{a.emoji}</div>
               <span className="text-white/60 text-[11px]">{a.label}</span>
             </button>
           ))}
