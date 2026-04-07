@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { uploadVideo, getAllSounds, type EtokSound } from "@/lib/etokService";
+import { uploadVideoAsync as uploadVideo, getAllSounds, type EtokSound } from "@/lib/etokService";
 
 type Stage = "record" | "preview" | "edit" | "post";
 type VideoPrivacy = "everyone" | "friends" | "only_me";

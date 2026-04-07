@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Check, ArrowRight, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { getUserById } from "@/lib/etokService";
+import { fetchEtokProfile } from "@/lib/etokService";
 import { toast } from "sonner";
 
 type Step = "welcome" | "account_type" | "new_account" | "terms";
