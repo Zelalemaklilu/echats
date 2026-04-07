@@ -8,7 +8,7 @@ import {
   getAccountGrowth, getCreatorStats, getAudienceDemographics, getVideoAnalytics, getRewards,
   type DailyData, type AudienceDemographics,
 } from "@/lib/etokCreatorService";
-import { getUserVideos, formatCount } from "@/lib/etokService";
+import { fetchUserVideos, formatCount } from "@/lib/etokService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
 type Period = "7d" | "28d";
