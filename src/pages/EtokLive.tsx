@@ -140,7 +140,7 @@ const EtokLive = () => {
 
   /* ─── WATCHING A LIVE STREAM ─── */
   if (currentStream) {
-    const host = getUserById(currentStream.hostId);
+    const host = hostProfiles[currentStream.hostId];
     const isHost = currentStream.hostId === currentUserId || isHosting;
 
     return (
