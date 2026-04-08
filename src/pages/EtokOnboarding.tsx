@@ -108,8 +108,14 @@ export function markEtokOnboarded(userId: string, data: object): void {
 const EtokOnboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
-  const echatProfile = getUserById(currentUserId);
+  const currentUserId = user?.id ?? "";
+  const [echatProfile, setEchatProfile] = useState<EtokUser | null>(null);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchEtokProfile(currentUserId).then(p => setEchatProfile(p));
+    }
+  }, [currentUserId]);
 
   const [step, setStep] = useState<Step>("welcome");
   const [accountType, setAccountType] = useState<AccountType>(null);
