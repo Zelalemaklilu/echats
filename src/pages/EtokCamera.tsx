@@ -250,16 +250,13 @@ const EtokCamera = () => {
             authorId: currentUserId,
             description,
             hashtags,
-            soundId: selectedSound?.id ?? "s4",
-            thumbnailEmoji,
-            thumbnailColor,
+            soundName: selectedSound?.title ?? "Original Sound",
             duration: Math.round(elapsed),
             privacy,
             allowComments,
             allowDuet,
             allowStitch,
             allowDownload,
-            isSponsored: false,
           },
           (pct) => setUploadProgress(pct)
         );
