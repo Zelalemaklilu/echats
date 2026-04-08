@@ -11,7 +11,7 @@ import {
   CATEGORIES, getScheduledLives, toggleReminder, getCoinsBalance,
   type EtokLiveStream, type LiveComment, type ScheduledLive,
 } from "@/lib/etokLiveService";
-import { formatCount, getUserById } from "@/lib/etokService";
+import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
 const MOCK_COMMENTS: { name: string; avatar: string; text: string }[] = [
@@ -29,8 +29,9 @@ const EtokLive = () => {
   const navigate = useNavigate();
   const { streamId } = useParams<{ streamId: string }>();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
-  const currentUser = getUserById(currentUserId);
+  const currentUserId = user?.id ?? "";
+  const [currentUser, setCurrentUser] = useState<EtokUser | null>(null);
+  const [hostProfiles, setHostProfiles] = useState<Record<string, EtokUser>>({});
 
   const [activeLives, setActiveLives] = useState(() => getActiveLives());
   const [scheduledLives, setScheduledLives] = useState(() => getScheduledLives());
@@ -48,6 +49,29 @@ const EtokLive = () => {
   const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string; color: string } | null>(null);
   const [coinBalance, setCoinBalance] = useState(getCoinsBalance);
   const commentsEndRef = useRef<HTMLDivElement>(null);
+
+  // Fetch current user profile
+  useEffect(() => {
+    if (currentUserId) {
+      fetchEtokProfile(currentUserId).then(p => setCurrentUser(p));
+    }
+  }, [currentUserId]);
+
+  // Fetch host profiles for active and scheduled lives
+  useEffect(() => {
+    const hostIds = new Set([
+      ...activeLives.map(l => l.hostId),
+      ...scheduledLives.map(l => l.hostId),
+      ...(currentStream ? [currentStream.hostId] : []),
+    ]);
+    hostIds.forEach(id => {
+      if (!hostProfiles[id]) {
+        fetchEtokProfile(id).then(p => {
+          if (p) setHostProfiles(prev => ({ ...prev, [id]: p }));
+        });
+      }
+    });
+  }, [activeLives, scheduledLives, currentStream]);
 
   useEffect(() => {
     if (!streamId) return;
