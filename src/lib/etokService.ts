@@ -460,6 +460,35 @@ export function searchHashtags(query: string): EtokHashtag[] {
   return DEMO_HASHTAGS.filter(h => h.name.toLowerCase().includes(q));
 }
 
+/* ═══════════════════════════════════════════
+   Sync compatibility shims (for pages that use synchronous APIs)
+   ═══════════════════════════════════════════ */
+
+export function getUserById(userId: string): EtokUser | null {
+  // Returns null synchronously; callers should migrate to fetchEtokProfile
+  return null;
+}
+
+export function isFollowing(_followerId: string, _followingId: string): boolean {
+  return false;
+}
+
+export function toggleFollow(_followerId: string, _followingId: string): boolean {
+  return false;
+}
+
+export function searchVideos(_query: string): EtokVideo[] {
+  return [];
+}
+
+export function searchUsers(_query: string): EtokUser[] {
+  return [];
+}
+
+export function getSuggestedUsers(_currentUserId: string): EtokUser[] {
+  return [];
+}
+
 // Not-interested (kept in localStorage since it's client-side preference)
 const NOT_INTERESTED_KEY = "etok_not_interested";
 export function markNotInterested(videoId: string): void {

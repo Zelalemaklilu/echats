@@ -11,7 +11,7 @@ import {
   CATEGORIES, getScheduledLives, toggleReminder, getCoinsBalance,
   type EtokLiveStream, type LiveComment, type ScheduledLive,
 } from "@/lib/etokLiveService";
-import { formatCount } from "@/lib/etokService";
+import { formatCount, getUserById } from "@/lib/etokService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
 const MOCK_COMMENTS: { name: string; avatar: string; text: string }[] = [

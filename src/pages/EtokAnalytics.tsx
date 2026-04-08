@@ -30,7 +30,7 @@ const EtokAnalytics = () => {
   const demographics: AudienceDemographics = getAudienceDemographics();
   const videoAnalytics = getVideoAnalytics();
   const rewards = getRewards();
-  const videos = getUserVideos(currentUserId);
+  const videos: any[] = [];
 
   const genderData = [
     { name: "Male", value: demographics.genderMale },
