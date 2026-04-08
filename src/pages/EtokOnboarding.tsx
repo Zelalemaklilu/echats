@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Check, ArrowRight, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchEtokProfile, getUserById } from "@/lib/etokService";
+import { fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { toast } from "sonner";
 
 type Step = "welcome" | "account_type" | "new_account" | "terms";
