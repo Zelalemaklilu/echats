@@ -1,4 +1,3 @@
-// @ts-nocheck
 import { useState, useEffect, useRef } from "react";
 import { useNavigate } from "react-router-dom";
 import { Search, X, TrendingUp, Check } from "lucide-react";
@@ -6,9 +5,9 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  searchVideos, searchUsers, searchSounds, searchHashtags,
-  getTrendingHashtags, getSuggestedUsers, getAllSounds,
-  isFollowing, toggleFollow, formatCount,
+  searchVideosAsync, searchUsersAsync, searchSounds, searchHashtags,
+  getTrendingHashtags, getAllSounds, checkIsFollowing, toggleFollowAsync,
+  formatCount,
   type EtokVideo, type EtokUser, type EtokHashtag, type EtokSound,
 } from "@/lib/etokService";
 import { getActiveLives } from "@/lib/etokLiveService";
@@ -18,24 +17,39 @@ type ResultTab = "top" | "users" | "videos" | "sounds" | "live";
 
 interface UserCardProps { user: EtokUser; currentUserId: string; onNavigate: (id: string) => void; }
 function UserCard({ user, currentUserId, onNavigate }: UserCardProps) {
-  const [following, setF] = useState(() => isFollowing(currentUserId, user.id));
+  const [following, setF] = useState(false);
+
+  useEffect(() => {
+    if (currentUserId && user.id) {
+      checkIsFollowing(currentUserId, user.id).then(setF);
+    }
+  }, [currentUserId, user.id]);
+
+  const handleToggleFollow = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const result = await toggleFollowAsync(currentUserId, user.id);
+    setF(result);
+  };
+
   return (
     <div className="flex items-center gap-3 w-full px-4 py-2.5 active:bg-white/5 cursor-pointer" onClick={() => onNavigate(user.id)}>
-      <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl flex-shrink-0">{user.avatar}</div>
-      <div className="flex-1 min-w-0 text-left">
-        <div className="flex items-center gap-1">
-          <span className="text-white font-semibold text-[14px] truncate">{user.username}</span>
-          {user.isVerified && <span className="text-blue-400 text-[11px]">✓</span>}
-        </div>
-        <p className="text-white/50 text-[12px]">{user.displayName} · {formatCount(user.followers)} followers</p>
+      <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl flex-shrink-0">
+        {user.avatar ? (
+          <img src={user.avatar} alt="" className="w-full h-full rounded-full object-cover" />
+        ) : "👤"}
       </div>
-      <button
-        onClick={e => { e.stopPropagation(); setF(toggleFollow(currentUserId, user.id)); }}
-        className={cn("px-3 py-1 rounded-md text-[12px] font-semibold flex-shrink-0 border transition-colors", following ? "border-white/20 text-white/60" : "border-[#ff0050] text-[#ff0050]")}
-        data-testid={`button-follow-${user.id}`}
-      >
-        {following ? <><Check className="h-3 w-3 inline mr-0.5" />Following</> : "Follow"}
-      </button>
+      <div className="flex-1 min-w-0 text-left">
+        <span className="text-white font-semibold text-[14px] truncate block">{user.username}</span>
+        <p className="text-white/50 text-[12px]">{user.displayName}</p>
+      </div>
+      {user.id !== currentUserId && (
+        <button
+          onClick={handleToggleFollow}
+          className={cn("px-3 py-1 rounded-md text-[12px] font-semibold flex-shrink-0 border transition-colors", following ? "border-white/20 text-white/60" : "border-[#ff0050] text-[#ff0050]")}
+        >
+          {following ? <><Check className="h-3 w-3 inline mr-0.5" />Following</> : "Follow"}
+        </button>
+      )}
     </div>
   );
 }
@@ -47,7 +61,6 @@ function VideoThumb({ video, onClick }: { video: EtokVideo; onClick: () => void 
     <button
       onClick={onClick}
       className="aspect-[9/16] relative overflow-hidden bg-black"
-      data-testid={`card-video-${video.id}`}
     >
       {video.videoUrl ? (
         <video
@@ -60,13 +73,13 @@ function VideoThumb({ video, onClick }: { video: EtokVideo; onClick: () => void 
           onLoadedMetadata={() => setLoaded(true)}
         />
       ) : (
-        <div className={cn("absolute inset-0 bg-gradient-to-b", video.thumbnailColor)}>
-          <span className="absolute inset-0 flex items-center justify-center text-4xl">{video.thumbnailEmoji}</span>
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-700 to-gray-900 flex items-center justify-center">
+          <span className="text-4xl">🎬</span>
         </div>
       )}
       {!loaded && video.videoUrl && (
-        <div className={cn("absolute inset-0 bg-gradient-to-b", video.thumbnailColor)}>
-          <span className="absolute inset-0 flex items-center justify-center text-4xl">{video.thumbnailEmoji}</span>
+        <div className="absolute inset-0 bg-gradient-to-b from-gray-700 to-gray-900 flex items-center justify-center">
+          <span className="text-4xl">🎬</span>
         </div>
       )}
       <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent" />
@@ -91,7 +104,7 @@ const CATEGORY_CARDS = [
 const EtokSearch = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
+  const currentUserId = user?.id ?? "";
   const inputRef = useRef<HTMLInputElement>(null);
 
   const [query, setQuery] = useState("");
@@ -102,19 +115,38 @@ const EtokSearch = () => {
   const [userResults, setUserResults] = useState<EtokUser[]>([]);
   const [soundResults, setSoundResults] = useState<EtokSound[]>([]);
   const [hashtagResults, setHashtagResults] = useState<EtokHashtag[]>([]);
+  const [suggestedUsers, setSuggestedUsers] = useState<EtokUser[]>([]);
 
   const trendingHashtags = getTrendingHashtags();
-  const suggestedUsers = getSuggestedUsers(currentUserId);
   const trendingSounds = getAllSounds().sort((a, b) => b.videoCount - a.videoCount).slice(0, 5);
   const activeLives = getActiveLives();
 
+  // Load suggested users on mount
   useEffect(() => {
-    if (!query.trim()) return;
-    setVideoResults(searchVideos(query));
-    setUserResults(searchUsers(query));
-    setSoundResults(searchSounds(query));
-    setHashtagResults(searchHashtags(query));
-    setActiveTab("top");
+    searchUsersAsync("").then(users => setSuggestedUsers(users.slice(0, 10)));
+  }, []);
+
+  // Search with debounce
+  useEffect(() => {
+    if (!query.trim()) {
+      setVideoResults([]);
+      setUserResults([]);
+      setSoundResults([]);
+      setHashtagResults([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      const [videos, users] = await Promise.all([
+        searchVideosAsync(query),
+        searchUsersAsync(query),
+      ]);
+      setVideoResults(videos);
+      setUserResults(users);
+      setSoundResults(searchSounds(query));
+      setHashtagResults(searchHashtags(query));
+      setActiveTab("top");
+    }, 300);
+    return () => clearTimeout(timer);
   }, [query]);
 
   const tabs: { id: ResultTab; label: string }[] = [
@@ -138,7 +170,6 @@ const EtokSearch = () => {
                 exit={{ opacity: 0, x: -10 }}
                 onClick={() => { setQuery(""); setFocused(false); inputRef.current?.blur(); }}
                 className="text-white font-medium text-[14px] flex-shrink-0"
-                data-testid="button-cancel-search"
               >
                 Cancel
               </motion.button>
@@ -154,10 +185,9 @@ const EtokSearch = () => {
               onBlur={() => !query && setFocused(false)}
               placeholder="Search"
               className="flex-1 bg-transparent text-white text-[15px] outline-none placeholder:text-white/40"
-              data-testid="input-etok-search"
             />
             {query && (
-              <button onClick={() => setQuery("")} data-testid="button-clear-search">
+              <button onClick={() => setQuery("")}>
                 <X className="h-4 w-4 text-white/50" />
               </button>
             )}
@@ -173,7 +203,6 @@ const EtokSearch = () => {
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
               className={cn("flex-shrink-0 px-4 py-2.5 text-[14px] font-semibold border-b-2 transition-colors", activeTab === tab.id ? "border-white text-white" : "border-transparent text-white/50")}
-              data-testid={`tab-search-${tab.id}`}
             >
               {tab.label}
             </button>
@@ -190,7 +219,6 @@ const EtokSearch = () => {
                 key={cat.label}
                 onClick={() => { setQuery(cat.label.toLowerCase()); setFocused(true); }}
                 className={cn("relative h-[90px] rounded-xl overflow-hidden bg-gradient-to-br", cat.gradient)}
-                data-testid={`button-category-${cat.label.toLowerCase()}`}
               >
                 <span className="absolute right-3 bottom-2 text-4xl opacity-80">{cat.emoji}</span>
                 <span className="absolute left-3 bottom-3 text-white font-bold text-[16px] drop-shadow">{cat.label}</span>
@@ -209,8 +237,7 @@ const EtokSearch = () => {
                 <button
                   key={h.id}
                   onClick={() => { setQuery("#" + h.name); setFocused(true); }}
-                  className="px-3 py-1.5 bg-white/8 rounded-full border border-white/10 text-[13px] text-white/80"
-                  data-testid={`button-hashtag-${h.name}`}
+                  className="px-3 py-1.5 bg-white/[0.08] rounded-full border border-white/10 text-[13px] text-white/80"
                 >
                   #{h.name}
                 </button>
@@ -248,7 +275,6 @@ const EtokSearch = () => {
         </div>
       ) : (
         <div className="pb-24">
-          {/* Top tab — users + videos mix */}
           {activeTab === "top" && (
             <>
               {userResults.length > 0 && (
@@ -278,12 +304,11 @@ const EtokSearch = () => {
                         key={h.id}
                         onClick={() => setQuery("#" + h.name)}
                         className="flex items-center gap-3 w-full px-4 py-3 active:bg-white/5 text-left"
-                        data-testid={`result-hashtag-${h.name}`}
                       >
                         <div className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-[18px] font-bold text-white">#</div>
                         <div>
                           <p className="text-white font-semibold text-[14px]">#{h.name}</p>
-                          <p className="text-white/50 text-[12px]">{formatCount(h.videoCount)} videos</p>
+                          <p className="text-white/50 text-[12px]">{formatCount(h.viewCount)} videos</p>
                         </div>
                       </button>
                     ))}
@@ -299,7 +324,6 @@ const EtokSearch = () => {
             </>
           )}
 
-          {/* Accounts tab */}
           {activeTab === "users" && (
             userResults.length === 0 ? (
               <div className="text-center py-20 text-white/40 text-[15px]">No accounts found</div>
@@ -308,7 +332,6 @@ const EtokSearch = () => {
             ))
           )}
 
-          {/* Videos tab */}
           {activeTab === "videos" && (
             videoResults.length === 0 ? (
               <div className="text-center py-20 text-white/40 text-[15px]">No videos found</div>
@@ -321,7 +344,6 @@ const EtokSearch = () => {
             )
           )}
 
-          {/* Sounds tab */}
           {activeTab === "sounds" && (
             soundResults.length === 0 ? (
               <div className="text-center py-20 text-white/40 text-[15px]">No sounds found</div>
@@ -342,7 +364,6 @@ const EtokSearch = () => {
             )
           )}
 
-          {/* Live tab */}
           {activeTab === "live" && (
             activeLives.length === 0 ? (
               <div className="text-center py-20 text-white/40 text-[15px]">No live streams right now</div>
@@ -353,7 +374,6 @@ const EtokSearch = () => {
                     key={live.id}
                     onClick={() => navigate(`/etok/live/${live.id}`)}
                     className={cn("aspect-[4/5] rounded-xl overflow-hidden relative bg-gradient-to-b", live.thumbnailColor)}
-                    data-testid={`card-live-${live.id}`}
                   >
                     <div className="absolute inset-0 flex items-center justify-center text-5xl">{live.thumbnailEmoji}</div>
                     <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent" />
