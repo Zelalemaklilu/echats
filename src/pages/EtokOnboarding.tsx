@@ -1,10 +1,10 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { ChevronRight, ChevronLeft, Check, ArrowRight, User, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchEtokProfile, getUserById } from "@/lib/etokService";
+import { fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { toast } from "sonner";
 
 type Step = "welcome" | "account_type" | "new_account" | "terms";
@@ -108,8 +108,14 @@ export function markEtokOnboarded(userId: string, data: object): void {
 const EtokOnboarding = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
-  const echatProfile = getUserById(currentUserId);
+  const currentUserId = user?.id ?? "";
+  const [echatProfile, setEchatProfile] = useState<EtokUser | null>(null);
+
+  useEffect(() => {
+    if (currentUserId) {
+      fetchEtokProfile(currentUserId).then(p => setEchatProfile(p));
+    }
+  }, [currentUserId]);
 
   const [step, setStep] = useState<Step>("welcome");
   const [accountType, setAccountType] = useState<AccountType>(null);
