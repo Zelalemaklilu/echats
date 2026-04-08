@@ -359,7 +359,7 @@ const EtokLive = () => {
         ) : (
           <div className="grid grid-cols-2 gap-2 mb-6">
             {filteredLives.map(live => {
-              const host = getUserById(live.hostId);
+              const host = hostProfiles[live.hostId];
               return (
                 <button
                   key={live.id}
@@ -407,7 +407,7 @@ const EtokLive = () => {
         <p className="text-white font-bold text-[15px] mb-3">📅 Upcoming Lives</p>
         <div className="space-y-3">
           {scheduledLives.map(s => {
-            const host = getUserById(s.hostId);
+            const host = hostProfiles[s.hostId];
             const hasReminder = s.reminderIds.includes(currentUserId);
             return (
               <div key={s.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
