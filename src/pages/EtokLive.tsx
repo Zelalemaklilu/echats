@@ -202,18 +202,7 @@ const EtokLive = () => {
           </div>
         </div>
 
-        {/* PK Battle */}
-        {currentStream.battlePartnerId && (
-          <div className="absolute top-24 left-4 right-4 z-10">
-            <div className="bg-black/60 rounded-full h-4 flex items-center overflow-hidden">
-              <div className="h-full bg-[#ff0050] rounded-l-full" style={{ flex: currentStream.battleHostScore ?? 1 }} />
-              <div className="w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center flex-shrink-0 -my-1">
-                <Swords className="h-3 w-3 text-white" />
-              </div>
-              <div className="h-full bg-blue-500 rounded-r-full" style={{ flex: currentStream.battlePartnerScore ?? 1 }} />
-            </div>
-          </div>
-        )}
+        {/* PK Battle (coming soon) */}
 
         {/* Scrolling comments */}
         <div className="absolute bottom-28 left-3 right-20 z-10 overflow-hidden" style={{ maxHeight: "45vh" }}>
@@ -408,7 +397,7 @@ const EtokLive = () => {
         <div className="space-y-3">
           {scheduledLives.map(s => {
             const host = hostProfiles[s.hostId];
-            const hasReminder = s.reminderIds.includes(currentUserId);
+            const hasReminder = !!s.hasReminder;
             return (
               <div key={s.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
                 <div className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-3xl flex-shrink-0">{s.thumbnailEmoji}</div>
