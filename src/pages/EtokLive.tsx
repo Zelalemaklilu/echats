@@ -182,7 +182,7 @@ const EtokLive = () => {
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-12 pb-3">
-          <button onClick={() => { leaveLive(currentStream.id); navigate("/etok/live"); }}>
+          <button onClick={() => { if (currentUserId) leaveLiveAsync(currentStream.id, currentUserId); navigate("/etok/live"); }}>
             <ArrowLeft className="h-6 w-6 text-white drop-shadow" />
           </button>
           <div className="flex items-center gap-2">
@@ -241,7 +241,7 @@ const EtokLive = () => {
         <div className="absolute right-3 bottom-32 z-10 flex flex-col gap-5 items-center">
           {isHost ? (
             <>
-              <button onClick={() => { if (myStream) { endLive(myStream.id); } setIsHosting(false); setCurrentStream(undefined); setMyStream(null); navigate("/etok/live"); }} className="flex flex-col items-center gap-1">
+              <button onClick={async () => { if (myStream) { await endLiveAsync(myStream.id); } setIsHosting(false); setCurrentStream(undefined); setMyStream(null); navigate("/etok/live"); }} className="flex flex-col items-center gap-1">
                 <div className="w-11 h-11 rounded-full bg-red-600 flex items-center justify-center"><X className="h-5 w-5 text-white" /></div>
                 <span className="text-white text-[10px]">End</span>
               </button>
@@ -424,7 +424,7 @@ const EtokLive = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => { toggleReminder(s.id, currentUserId); setScheduledLives(getScheduledLives()); toast.success(hasReminder ? "Reminder removed" : "Reminder set! 🔔"); }}
+                  onClick={async () => { const set = await toggleReminderAsync(s.id, currentUserId); setScheduledLives(await fetchScheduledLives(currentUserId)); toast.success(set ? "Reminder set! 🔔" : "Reminder removed"); }}
                   className={cn("flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-semibold transition-colors", hasReminder ? "bg-[#ff0050] text-white" : "border border-white/20 text-white/70")}
                 >
                   {hasReminder ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
