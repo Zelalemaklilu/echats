@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  getActiveLives, getLiveById, joinLive, leaveLive, addLiveComment,
-  getLiveComments, sendLiveGift, startLive, endLive, LIVE_GIFTS,
-  CATEGORIES, getScheduledLives, toggleReminder, getCoinsBalance,
+  fetchActiveLives, fetchLiveById, joinLiveAsync, leaveLiveAsync, addLiveCommentAsync,
+  fetchLiveComments, sendLiveGiftAsync, startLiveAsync, endLiveAsync, LIVE_GIFTS,
+  CATEGORIES, fetchScheduledLives, toggleReminderAsync, getCoinsBalanceAsync,
+  subscribeLiveComments, subscribeStreamUpdates,
   type EtokLiveStream, type LiveComment, type ScheduledLive,
 } from "@/lib/etokLiveService";
 import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService";
@@ -33,10 +34,10 @@ const EtokLive = () => {
   const [currentUser, setCurrentUser] = useState<EtokUser | null>(null);
   const [hostProfiles, setHostProfiles] = useState<Record<string, EtokUser>>({});
 
-  const [activeLives, setActiveLives] = useState(() => getActiveLives());
-  const [scheduledLives, setScheduledLives] = useState(() => getScheduledLives());
+  const [activeLives, setActiveLives] = useState<EtokLiveStream[]>([]);
+  const [scheduledLives, setScheduledLives] = useState<ScheduledLive[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [currentStream, setCurrentStream] = useState<EtokLiveStream | undefined>(() => streamId ? getLiveById(streamId) : undefined);
+  const [currentStream, setCurrentStream] = useState<EtokLiveStream | undefined>(undefined);
   const [comments, setComments] = useState<LiveComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [showGifts, setShowGifts] = useState(false);
@@ -47,7 +48,7 @@ const EtokLive = () => {
   const [myStream, setMyStream] = useState<EtokLiveStream | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string; color: string } | null>(null);
-  const [coinBalance, setCoinBalance] = useState(getCoinsBalance);
+  const [coinBalance, setCoinBalance] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch current user profile
@@ -73,21 +74,40 @@ const EtokLive = () => {
     });
   }, [activeLives, scheduledLives, currentStream]);
 
+  // Initial load of lives & coins
   useEffect(() => {
-    if (!streamId) return;
-    const stream = getLiveById(streamId);
-    setCurrentStream(stream);
-    if (stream) { joinLive(streamId); setComments(getLiveComments(streamId)); }
-  }, [streamId]);
+    fetchActiveLives().then(setActiveLives);
+    fetchScheduledLives(currentUserId).then(setScheduledLives);
+    if (currentUserId) getCoinsBalanceAsync(currentUserId).then(setCoinBalance);
+  }, [currentUserId]);
 
+  // Load specific stream when navigated
+  useEffect(() => {
+    if (!streamId || !currentUserId) return;
+    fetchLiveById(streamId).then(async (stream) => {
+      if (!stream) return;
+      setCurrentStream(stream);
+      await joinLiveAsync(streamId, currentUserId);
+      const c = await fetchLiveComments(streamId);
+      setComments(c);
+    });
+    return () => {
+      if (streamId && currentUserId) leaveLiveAsync(streamId, currentUserId);
+    };
+  }, [streamId, currentUserId]);
+
+  // Realtime: subscribe to new comments + stream updates
   useEffect(() => {
     if (!currentStream) return;
-    const refresh = setInterval(() => {
-      setComments(getLiveComments(currentStream.id));
-      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 2000);
-    return () => clearInterval(refresh);
-  }, [currentStream]);
+    const unsubComments = subscribeLiveComments(currentStream.id, (c) => {
+      setComments(prev => [...prev, c].slice(-100));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    });
+    const unsubStream = subscribeStreamUpdates(currentStream.id, (s) => {
+      setCurrentStream(s);
+    });
+    return () => { unsubComments(); unsubStream(); };
+  }, [currentStream?.id]);
 
   useEffect(() => {
     if (!currentStream) return;
@@ -97,38 +117,30 @@ const EtokLive = () => {
     return () => clearInterval(timer);
   }, [currentStream]);
 
-  useEffect(() => {
-    if (!currentStream) return;
-    const autoComment = setInterval(() => {
-      const c = MOCK_COMMENTS[Math.floor(Math.random() * MOCK_COMMENTS.length)];
-      addLiveComment(currentStream.id, `bot_${c.name}`, c.name, c.avatar, c.text);
-    }, 2500 + Math.random() * 3000);
-    return () => clearInterval(autoComment);
-  }, [currentStream]);
-
   const formatElapsed = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const handleSendComment = () => {
+  const handleSendComment = async () => {
     if (!commentText.trim() || !currentStream) return;
-    addLiveComment(currentStream.id, currentUserId, currentUser?.username ?? "you", currentUser?.avatar ?? "👤", commentText);
+    const txt = commentText;
     setCommentText("");
-    setComments(getLiveComments(currentStream.id));
+    await addLiveCommentAsync(currentStream.id, currentUserId, txt);
   };
 
-  const handleSendGift = (giftId: string) => {
+  const handleSendGift = async (giftId: string) => {
     if (!currentStream) return;
-    const success = sendLiveGift(currentStream.id, giftId, currentUserId, currentUser?.username ?? "you", currentUser?.avatar ?? "👤");
+    const success = await sendLiveGiftAsync(currentStream.id, giftId, currentUserId, currentStream.hostId);
     if (success) {
       const gift = LIVE_GIFTS.find(g => g.id === giftId);
       if (gift) { setGiftAnim({ emoji: gift.emoji, name: gift.name, color: gift.animationColor }); setTimeout(() => setGiftAnim(null), 2000); }
-      setCoinBalance(getCoinsBalance());
-      setComments(getLiveComments(currentStream.id));
+      const bal = await getCoinsBalanceAsync(currentUserId);
+      setCoinBalance(bal);
     } else toast.error("Not enough coins! Buy more coins.");
   };
 
-  const handleStartLive = () => {
+  const handleStartLive = async () => {
     if (!liveTitle.trim()) { toast.error("Add a title first"); return; }
-    const stream = startLive(currentUserId, liveTitle, liveCategory);
+    const stream = await startLiveAsync(currentUserId, liveTitle, liveCategory);
+    if (!stream) { toast.error("Failed to start live"); return; }
     setMyStream(stream);
     setCurrentStream(stream);
     setIsHosting(true);
