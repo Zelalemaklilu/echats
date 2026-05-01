@@ -154,6 +154,42 @@ export type Database = {
         }
         Relationships: []
       }
+      etok_blocked_users: {
+        Row: {
+          blocked_at: string
+          blocked_id: string
+          blocker_id: string
+        }
+        Insert: {
+          blocked_at?: string
+          blocked_id: string
+          blocker_id: string
+        }
+        Update: {
+          blocked_at?: string
+          blocked_id?: string
+          blocker_id?: string
+        }
+        Relationships: []
+      }
+      etok_coins: {
+        Row: {
+          balance: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          balance?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          balance?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       etok_comments: {
         Row: {
           author_id: string
@@ -209,6 +245,39 @@ export type Database = {
           },
         ]
       }
+      etok_creator_rewards: {
+        Row: {
+          amount_usd: number
+          created_at: string
+          id: string
+          period_end: string
+          period_start: string
+          status: string
+          user_id: string
+          views_earned: number
+        }
+        Insert: {
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          period_end: string
+          period_start: string
+          status?: string
+          user_id: string
+          views_earned?: number
+        }
+        Update: {
+          amount_usd?: number
+          created_at?: string
+          id?: string
+          period_end?: string
+          period_start?: string
+          status?: string
+          user_id?: string
+          views_earned?: number
+        }
+        Relationships: []
+      }
       etok_follows: {
         Row: {
           created_at: string
@@ -242,6 +311,74 @@ export type Database = {
           },
         ]
       }
+      etok_gifts_sent: {
+        Row: {
+          coins: number
+          created_at: string
+          gift_emoji: string
+          gift_id: string
+          gift_name: string
+          id: string
+          recipient_id: string
+          sender_id: string
+          stream_id: string
+        }
+        Insert: {
+          coins: number
+          created_at?: string
+          gift_emoji: string
+          gift_id: string
+          gift_name: string
+          id?: string
+          recipient_id: string
+          sender_id: string
+          stream_id: string
+        }
+        Update: {
+          coins?: number
+          created_at?: string
+          gift_emoji?: string
+          gift_id?: string
+          gift_name?: string
+          id?: string
+          recipient_id?: string
+          sender_id?: string
+          stream_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_gifts_sent_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "etok_live_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_hashtags: {
+        Row: {
+          created_at: string
+          id: string
+          name: string
+          trending: boolean
+          view_count: number
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          name: string
+          trending?: boolean
+          view_count?: number
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          name?: string
+          trending?: boolean
+          view_count?: number
+        }
+        Relationships: []
+      }
       etok_likes: {
         Row: {
           created_at: string
@@ -271,6 +408,451 @@ export type Database = {
           },
           {
             foreignKeyName: "etok_likes_video_id_fkey"
+            columns: ["video_id"]
+            isOneToOne: false
+            referencedRelation: "etok_videos"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_live_comments: {
+        Row: {
+          author_id: string
+          created_at: string
+          gift_emoji: string | null
+          id: string
+          is_gift: boolean
+          stream_id: string
+          text: string
+        }
+        Insert: {
+          author_id: string
+          created_at?: string
+          gift_emoji?: string | null
+          id?: string
+          is_gift?: boolean
+          stream_id: string
+          text: string
+        }
+        Update: {
+          author_id?: string
+          created_at?: string
+          gift_emoji?: string | null
+          id?: string
+          is_gift?: boolean
+          stream_id?: string
+          text?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_live_comments_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "etok_live_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_live_streams: {
+        Row: {
+          category: string
+          created_at: string
+          ended_at: string | null
+          gift_total: number
+          host_id: string
+          id: string
+          is_live: boolean
+          started_at: string
+          thumbnail_color: string
+          thumbnail_emoji: string
+          title: string
+          viewer_count: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          ended_at?: string | null
+          gift_total?: number
+          host_id: string
+          id?: string
+          is_live?: boolean
+          started_at?: string
+          thumbnail_color?: string
+          thumbnail_emoji?: string
+          title: string
+          viewer_count?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          ended_at?: string | null
+          gift_total?: number
+          host_id?: string
+          id?: string
+          is_live?: boolean
+          started_at?: string
+          thumbnail_color?: string
+          thumbnail_emoji?: string
+          title?: string
+          viewer_count?: number
+        }
+        Relationships: []
+      }
+      etok_live_viewers: {
+        Row: {
+          joined_at: string
+          stream_id: string
+          user_id: string
+        }
+        Insert: {
+          joined_at?: string
+          stream_id: string
+          user_id: string
+        }
+        Update: {
+          joined_at?: string
+          stream_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_live_viewers_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "etok_live_streams"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_privacy_settings: {
+        Row: {
+          allow_comments: string
+          allow_download: boolean
+          comment_keywords: string[]
+          default_video_privacy: string
+          duet_permission: string
+          family_pairing_email: string
+          family_pairing_linked: boolean
+          filter_spam: boolean
+          is_business_account: boolean
+          private_account: boolean
+          screen_time_limit_minutes: number
+          screen_time_reminder_enabled: boolean
+          screen_time_reminder_interval: number
+          stitch_permission: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          allow_comments?: string
+          allow_download?: boolean
+          comment_keywords?: string[]
+          default_video_privacy?: string
+          duet_permission?: string
+          family_pairing_email?: string
+          family_pairing_linked?: boolean
+          filter_spam?: boolean
+          is_business_account?: boolean
+          private_account?: boolean
+          screen_time_limit_minutes?: number
+          screen_time_reminder_enabled?: boolean
+          screen_time_reminder_interval?: number
+          stitch_permission?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          allow_comments?: string
+          allow_download?: boolean
+          comment_keywords?: string[]
+          default_video_privacy?: string
+          duet_permission?: string
+          family_pairing_email?: string
+          family_pairing_linked?: boolean
+          filter_spam?: boolean
+          is_business_account?: boolean
+          private_account?: boolean
+          screen_time_limit_minutes?: number
+          screen_time_reminder_enabled?: boolean
+          screen_time_reminder_interval?: number
+          stitch_permission?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      etok_reports: {
+        Row: {
+          content_id: string
+          content_type: string
+          id: string
+          reason: string
+          reported_at: string
+          reporter_id: string
+        }
+        Insert: {
+          content_id: string
+          content_type: string
+          id?: string
+          reason: string
+          reported_at?: string
+          reporter_id: string
+        }
+        Update: {
+          content_id?: string
+          content_type?: string
+          id?: string
+          reason?: string
+          reported_at?: string
+          reporter_id?: string
+        }
+        Relationships: []
+      }
+      etok_scheduled_lives: {
+        Row: {
+          category: string
+          created_at: string
+          host_id: string
+          id: string
+          scheduled_at: string
+          thumbnail_emoji: string
+          title: string
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          host_id: string
+          id?: string
+          scheduled_at: string
+          thumbnail_emoji?: string
+          title: string
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          host_id?: string
+          id?: string
+          scheduled_at?: string
+          thumbnail_emoji?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      etok_scheduled_reminders: {
+        Row: {
+          created_at: string
+          scheduled_id: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          scheduled_id: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          scheduled_id?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_scheduled_reminders_scheduled_id_fkey"
+            columns: ["scheduled_id"]
+            isOneToOne: false
+            referencedRelation: "etok_scheduled_lives"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_series: {
+        Row: {
+          cover_emoji: string
+          created_at: string
+          creator_id: string
+          description: string
+          episode_count: number
+          id: string
+          price: number
+          subscribers: number
+          title: string
+        }
+        Insert: {
+          cover_emoji?: string
+          created_at?: string
+          creator_id: string
+          description?: string
+          episode_count?: number
+          id?: string
+          price?: number
+          subscribers?: number
+          title: string
+        }
+        Update: {
+          cover_emoji?: string
+          created_at?: string
+          creator_id?: string
+          description?: string
+          episode_count?: number
+          id?: string
+          price?: number
+          subscribers?: number
+          title?: string
+        }
+        Relationships: []
+      }
+      etok_series_subscribers: {
+        Row: {
+          series_id: string
+          subscribed_at: string
+          user_id: string
+        }
+        Insert: {
+          series_id: string
+          subscribed_at?: string
+          user_id: string
+        }
+        Update: {
+          series_id?: string
+          subscribed_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_series_subscribers_series_id_fkey"
+            columns: ["series_id"]
+            isOneToOne: false
+            referencedRelation: "etok_series"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_shop_items: {
+        Row: {
+          category: string
+          created_at: string
+          currency: string
+          description: string
+          emoji: string
+          id: string
+          in_stock: boolean
+          name: string
+          price: number
+          seller_id: string
+          sold: number
+        }
+        Insert: {
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          emoji?: string
+          id?: string
+          in_stock?: boolean
+          name: string
+          price?: number
+          seller_id: string
+          sold?: number
+        }
+        Update: {
+          category?: string
+          created_at?: string
+          currency?: string
+          description?: string
+          emoji?: string
+          id?: string
+          in_stock?: boolean
+          name?: string
+          price?: number
+          seller_id?: string
+          sold?: number
+        }
+        Relationships: []
+      }
+      etok_sounds: {
+        Row: {
+          audio_url: string | null
+          author_name: string
+          cover_emoji: string
+          created_at: string
+          duration: number
+          id: string
+          is_original: boolean
+          title: string
+          video_count: number
+        }
+        Insert: {
+          audio_url?: string | null
+          author_name: string
+          cover_emoji?: string
+          created_at?: string
+          duration?: number
+          id?: string
+          is_original?: boolean
+          title: string
+          video_count?: number
+        }
+        Update: {
+          audio_url?: string | null
+          author_name?: string
+          cover_emoji?: string
+          created_at?: string
+          duration?: number
+          id?: string
+          is_original?: boolean
+          title?: string
+          video_count?: number
+        }
+        Relationships: []
+      }
+      etok_video_analytics_daily: {
+        Row: {
+          author_id: string
+          avg_watch_percent: number
+          comments: number
+          date: string
+          id: string
+          likes: number
+          shares: number
+          source_following: number
+          source_fyp: number
+          source_profile: number
+          source_search: number
+          video_id: string
+          views: number
+        }
+        Insert: {
+          author_id: string
+          avg_watch_percent?: number
+          comments?: number
+          date: string
+          id?: string
+          likes?: number
+          shares?: number
+          source_following?: number
+          source_fyp?: number
+          source_profile?: number
+          source_search?: number
+          video_id: string
+          views?: number
+        }
+        Update: {
+          author_id?: string
+          avg_watch_percent?: number
+          comments?: number
+          date?: string
+          id?: string
+          likes?: number
+          shares?: number
+          source_following?: number
+          source_fyp?: number
+          source_profile?: number
+          source_search?: number
+          video_id?: string
+          views?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_video_analytics_daily_video_id_fkey"
             columns: ["video_id"]
             isOneToOne: false
             referencedRelation: "etok_videos"
@@ -348,6 +930,44 @@ export type Database = {
             columns: ["author_id"]
             isOneToOne: false
             referencedRelation: "profiles"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      etok_webrtc_signals: {
+        Row: {
+          created_at: string
+          from_user_id: string
+          id: string
+          payload: Json
+          signal_type: string
+          stream_id: string
+          to_user_id: string
+        }
+        Insert: {
+          created_at?: string
+          from_user_id: string
+          id?: string
+          payload: Json
+          signal_type: string
+          stream_id: string
+          to_user_id: string
+        }
+        Update: {
+          created_at?: string
+          from_user_id?: string
+          id?: string
+          payload?: Json
+          signal_type?: string
+          stream_id?: string
+          to_user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "etok_webrtc_signals_stream_id_fkey"
+            columns: ["stream_id"]
+            isOneToOne: false
+            referencedRelation: "etok_live_streams"
             referencedColumns: ["id"]
           },
         ]
