@@ -6,9 +6,10 @@ import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  getActiveLives, getLiveById, joinLive, leaveLive, addLiveComment,
-  getLiveComments, sendLiveGift, startLive, endLive, LIVE_GIFTS,
-  CATEGORIES, getScheduledLives, toggleReminder, getCoinsBalance,
+  fetchActiveLives, fetchLiveById, joinLiveAsync, leaveLiveAsync, addLiveCommentAsync,
+  fetchLiveComments, sendLiveGiftAsync, startLiveAsync, endLiveAsync, LIVE_GIFTS,
+  CATEGORIES, fetchScheduledLives, toggleReminderAsync, getCoinsBalanceAsync,
+  subscribeLiveComments, subscribeStreamUpdates,
   type EtokLiveStream, type LiveComment, type ScheduledLive,
 } from "@/lib/etokLiveService";
 import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService";
@@ -33,10 +34,10 @@ const EtokLive = () => {
   const [currentUser, setCurrentUser] = useState<EtokUser | null>(null);
   const [hostProfiles, setHostProfiles] = useState<Record<string, EtokUser>>({});
 
-  const [activeLives, setActiveLives] = useState(() => getActiveLives());
-  const [scheduledLives, setScheduledLives] = useState(() => getScheduledLives());
+  const [activeLives, setActiveLives] = useState<EtokLiveStream[]>([]);
+  const [scheduledLives, setScheduledLives] = useState<ScheduledLive[]>([]);
   const [selectedCategory, setSelectedCategory] = useState("All");
-  const [currentStream, setCurrentStream] = useState<EtokLiveStream | undefined>(() => streamId ? getLiveById(streamId) : undefined);
+  const [currentStream, setCurrentStream] = useState<EtokLiveStream | undefined>(undefined);
   const [comments, setComments] = useState<LiveComment[]>([]);
   const [commentText, setCommentText] = useState("");
   const [showGifts, setShowGifts] = useState(false);
@@ -47,7 +48,7 @@ const EtokLive = () => {
   const [myStream, setMyStream] = useState<EtokLiveStream | null>(null);
   const [elapsed, setElapsed] = useState(0);
   const [giftAnim, setGiftAnim] = useState<{ emoji: string; name: string; color: string } | null>(null);
-  const [coinBalance, setCoinBalance] = useState(getCoinsBalance);
+  const [coinBalance, setCoinBalance] = useState(0);
   const commentsEndRef = useRef<HTMLDivElement>(null);
 
   // Fetch current user profile
@@ -73,21 +74,40 @@ const EtokLive = () => {
     });
   }, [activeLives, scheduledLives, currentStream]);
 
+  // Initial load of lives & coins
   useEffect(() => {
-    if (!streamId) return;
-    const stream = getLiveById(streamId);
-    setCurrentStream(stream);
-    if (stream) { joinLive(streamId); setComments(getLiveComments(streamId)); }
-  }, [streamId]);
+    fetchActiveLives().then(setActiveLives);
+    fetchScheduledLives(currentUserId).then(setScheduledLives);
+    if (currentUserId) getCoinsBalanceAsync(currentUserId).then(setCoinBalance);
+  }, [currentUserId]);
 
+  // Load specific stream when navigated
+  useEffect(() => {
+    if (!streamId || !currentUserId) return;
+    fetchLiveById(streamId).then(async (stream) => {
+      if (!stream) return;
+      setCurrentStream(stream);
+      await joinLiveAsync(streamId, currentUserId);
+      const c = await fetchLiveComments(streamId);
+      setComments(c);
+    });
+    return () => {
+      if (streamId && currentUserId) leaveLiveAsync(streamId, currentUserId);
+    };
+  }, [streamId, currentUserId]);
+
+  // Realtime: subscribe to new comments + stream updates
   useEffect(() => {
     if (!currentStream) return;
-    const refresh = setInterval(() => {
-      setComments(getLiveComments(currentStream.id));
-      commentsEndRef.current?.scrollIntoView({ behavior: "smooth" });
-    }, 2000);
-    return () => clearInterval(refresh);
-  }, [currentStream]);
+    const unsubComments = subscribeLiveComments(currentStream.id, (c) => {
+      setComments(prev => [...prev, c].slice(-100));
+      setTimeout(() => commentsEndRef.current?.scrollIntoView({ behavior: "smooth" }), 50);
+    });
+    const unsubStream = subscribeStreamUpdates(currentStream.id, (s) => {
+      setCurrentStream(s);
+    });
+    return () => { unsubComments(); unsubStream(); };
+  }, [currentStream?.id]);
 
   useEffect(() => {
     if (!currentStream) return;
@@ -97,38 +117,30 @@ const EtokLive = () => {
     return () => clearInterval(timer);
   }, [currentStream]);
 
-  useEffect(() => {
-    if (!currentStream) return;
-    const autoComment = setInterval(() => {
-      const c = MOCK_COMMENTS[Math.floor(Math.random() * MOCK_COMMENTS.length)];
-      addLiveComment(currentStream.id, `bot_${c.name}`, c.name, c.avatar, c.text);
-    }, 2500 + Math.random() * 3000);
-    return () => clearInterval(autoComment);
-  }, [currentStream]);
-
   const formatElapsed = (s: number) => `${Math.floor(s / 60)}:${(s % 60).toString().padStart(2, "0")}`;
 
-  const handleSendComment = () => {
+  const handleSendComment = async () => {
     if (!commentText.trim() || !currentStream) return;
-    addLiveComment(currentStream.id, currentUserId, currentUser?.username ?? "you", currentUser?.avatar ?? "👤", commentText);
+    const txt = commentText;
     setCommentText("");
-    setComments(getLiveComments(currentStream.id));
+    await addLiveCommentAsync(currentStream.id, currentUserId, txt);
   };
 
-  const handleSendGift = (giftId: string) => {
+  const handleSendGift = async (giftId: string) => {
     if (!currentStream) return;
-    const success = sendLiveGift(currentStream.id, giftId, currentUserId, currentUser?.username ?? "you", currentUser?.avatar ?? "👤");
+    const success = await sendLiveGiftAsync(currentStream.id, giftId, currentUserId, currentStream.hostId);
     if (success) {
       const gift = LIVE_GIFTS.find(g => g.id === giftId);
       if (gift) { setGiftAnim({ emoji: gift.emoji, name: gift.name, color: gift.animationColor }); setTimeout(() => setGiftAnim(null), 2000); }
-      setCoinBalance(getCoinsBalance());
-      setComments(getLiveComments(currentStream.id));
+      const bal = await getCoinsBalanceAsync(currentUserId);
+      setCoinBalance(bal);
     } else toast.error("Not enough coins! Buy more coins.");
   };
 
-  const handleStartLive = () => {
+  const handleStartLive = async () => {
     if (!liveTitle.trim()) { toast.error("Add a title first"); return; }
-    const stream = startLive(currentUserId, liveTitle, liveCategory);
+    const stream = await startLiveAsync(currentUserId, liveTitle, liveCategory);
+    if (!stream) { toast.error("Failed to start live"); return; }
     setMyStream(stream);
     setCurrentStream(stream);
     setIsHosting(true);
@@ -170,7 +182,7 @@ const EtokLive = () => {
 
         {/* Top bar */}
         <div className="absolute top-0 left-0 right-0 z-10 flex items-center justify-between px-4 pt-12 pb-3">
-          <button onClick={() => { leaveLive(currentStream.id); navigate("/etok/live"); }}>
+          <button onClick={() => { if (currentUserId) leaveLiveAsync(currentStream.id, currentUserId); navigate("/etok/live"); }}>
             <ArrowLeft className="h-6 w-6 text-white drop-shadow" />
           </button>
           <div className="flex items-center gap-2">
@@ -202,18 +214,7 @@ const EtokLive = () => {
           </div>
         </div>
 
-        {/* PK Battle */}
-        {currentStream.battlePartnerId && (
-          <div className="absolute top-24 left-4 right-4 z-10">
-            <div className="bg-black/60 rounded-full h-4 flex items-center overflow-hidden">
-              <div className="h-full bg-[#ff0050] rounded-l-full" style={{ flex: currentStream.battleHostScore ?? 1 }} />
-              <div className="w-6 h-6 rounded-full bg-black border-2 border-white flex items-center justify-center flex-shrink-0 -my-1">
-                <Swords className="h-3 w-3 text-white" />
-              </div>
-              <div className="h-full bg-blue-500 rounded-r-full" style={{ flex: currentStream.battlePartnerScore ?? 1 }} />
-            </div>
-          </div>
-        )}
+        {/* PK Battle (coming soon) */}
 
         {/* Scrolling comments */}
         <div className="absolute bottom-28 left-3 right-20 z-10 overflow-hidden" style={{ maxHeight: "45vh" }}>
@@ -240,7 +241,7 @@ const EtokLive = () => {
         <div className="absolute right-3 bottom-32 z-10 flex flex-col gap-5 items-center">
           {isHost ? (
             <>
-              <button onClick={() => { if (myStream) { endLive(myStream.id); } setIsHosting(false); setCurrentStream(undefined); setMyStream(null); navigate("/etok/live"); }} className="flex flex-col items-center gap-1">
+              <button onClick={async () => { if (myStream) { await endLiveAsync(myStream.id); } setIsHosting(false); setCurrentStream(undefined); setMyStream(null); navigate("/etok/live"); }} className="flex flex-col items-center gap-1">
                 <div className="w-11 h-11 rounded-full bg-red-600 flex items-center justify-center"><X className="h-5 w-5 text-white" /></div>
                 <span className="text-white text-[10px]">End</span>
               </button>
@@ -408,7 +409,7 @@ const EtokLive = () => {
         <div className="space-y-3">
           {scheduledLives.map(s => {
             const host = hostProfiles[s.hostId];
-            const hasReminder = s.reminderIds.includes(currentUserId);
+            const hasReminder = !!s.hasReminder;
             return (
               <div key={s.id} className="flex items-center gap-3 bg-white/5 rounded-xl p-3">
                 <div className="w-14 h-14 rounded-xl bg-white/10 flex items-center justify-center text-3xl flex-shrink-0">{s.thumbnailEmoji}</div>
@@ -423,7 +424,7 @@ const EtokLive = () => {
                   </p>
                 </div>
                 <button
-                  onClick={() => { toggleReminder(s.id, currentUserId); setScheduledLives(getScheduledLives()); toast.success(hasReminder ? "Reminder removed" : "Reminder set! 🔔"); }}
+                  onClick={async () => { const set = await toggleReminderAsync(s.id, currentUserId); setScheduledLives(await fetchScheduledLives(currentUserId)); toast.success(set ? "Reminder set! 🔔" : "Reminder removed"); }}
                   className={cn("flex-shrink-0 flex items-center gap-1.5 px-3 py-2 rounded-full text-[12px] font-semibold transition-colors", hasReminder ? "bg-[#ff0050] text-white" : "border border-white/20 text-white/70")}
                 >
                   {hasReminder ? <BellOff className="h-3.5 w-3.5" /> : <Bell className="h-3.5 w-3.5" />}
