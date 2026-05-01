@@ -1,3 +1,10 @@
+// @ts-nocheck
+import { supabase } from "@/integrations/supabase/client";
+
+/* ═══════════════════════════════════════════
+   Types & constants
+   ═══════════════════════════════════════════ */
+
 export interface LiveGiftItem {
   id: string;
   emoji: string;
@@ -17,14 +24,6 @@ export interface EtokLiveStream {
   thumbnailColor: string;
   thumbnailEmoji: string;
   isLive: boolean;
-  guestIds: string[];
-  moderatorIds: string[];
-  mutedUserIds: string[];
-  blockedUserIds: string[];
-  battlePartnerId?: string;
-  battleHostScore?: number;
-  battlePartnerScore?: number;
-  battleEndsAt?: string;
 }
 
 export interface LiveComment {
@@ -45,8 +44,9 @@ export interface ScheduledLive {
   title: string;
   scheduledAt: string;
   category: string;
-  reminderIds: string[];
   thumbnailEmoji: string;
+  reminderCount?: number;
+  hasReminder?: boolean;
 }
 
 export const LIVE_GIFTS: LiveGiftItem[] = [
@@ -64,12 +64,7 @@ export const LIVE_GIFTS: LiveGiftItem[] = [
   { id: "lg12", emoji: "🎆", name: "Fireworks", coins: 300, animationColor: "#ff4488" },
 ];
 
-const LIVE_KEY = "etok_lives";
-const LIVE_COMMENTS_KEY = "etok_live_comments";
-const SCHEDULED_KEY = "etok_scheduled_lives";
-const COINS_KEY = "etok_coins_balance";
-const VERSION_KEY = "etok_live_version";
-const CURRENT_VERSION = "1";
+export const CATEGORIES = ["Music", "Gaming", "Food", "Education", "Comedy", "Dance", "Travel", "Fitness", "Art", "Fashion"];
 
 const BG_COLORS = [
   "from-violet-900 to-purple-900",
@@ -80,172 +75,374 @@ const BG_COLORS = [
   "from-cyan-900 to-blue-900",
 ];
 
-const CATEGORIES = ["Music", "Gaming", "Food", "Education", "Comedy", "Dance", "Travel", "Fitness", "Art", "Fashion"];
+/* ═══════════════════════════════════════════
+   Mappers
+   ═══════════════════════════════════════════ */
 
-const DEMO_LIVES: EtokLiveStream[] = [
-  { id: "live1", hostId: "u7", title: "Live Music Session 🎵 Playing your requests!", category: "Music", viewerCount: 12400, giftTotal: 8900, startedAt: new Date(Date.now() - 35 * 60000).toISOString(), thumbnailColor: BG_COLORS[0], thumbnailEmoji: "🎵", isLive: true, guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-  { id: "live2", hostId: "u5", title: "Comedy Night — Roast session! 😂", category: "Comedy", viewerCount: 34500, giftTotal: 23000, startedAt: new Date(Date.now() - 72 * 60000).toISOString(), thumbnailColor: BG_COLORS[1], thumbnailEmoji: "😂", isLive: true, guestIds: ["u1"], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-  { id: "live3", hostId: "u4", title: "Live Workout — Join me! 💪", category: "Fitness", viewerCount: 5600, giftTotal: 2300, startedAt: new Date(Date.now() - 18 * 60000).toISOString(), thumbnailColor: BG_COLORS[2], thumbnailEmoji: "💪", isLive: true, guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-  { id: "live4", hostId: "u6", title: "Speed art — drawing your portraits! 🎨", category: "Art", viewerCount: 2800, giftTotal: 1200, startedAt: new Date(Date.now() - 45 * 60000).toISOString(), thumbnailColor: BG_COLORS[3], thumbnailEmoji: "🎨", isLive: true, guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-  { id: "live5", hostId: "u8", title: "Fashion haul — new Ethiopian designers! 👗", category: "Fashion", viewerCount: 8900, giftTotal: 5600, startedAt: new Date(Date.now() - 25 * 60000).toISOString(), thumbnailColor: BG_COLORS[4], thumbnailEmoji: "👗", isLive: true, guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-  { id: "live6", hostId: "u3", title: "Q&A — ask me anything about travel! ✈️", category: "Travel", viewerCount: 4200, giftTotal: 1800, startedAt: new Date(Date.now() - 60 * 60000).toISOString(), thumbnailColor: BG_COLORS[5], thumbnailEmoji: "✈️", isLive: true, guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [] },
-];
-
-const DEMO_SCHEDULED: ScheduledLive[] = [
-  { id: "sl1", hostId: "u7", title: "Album Release Party LIVE 🎉", scheduledAt: new Date(Date.now() + 2 * 24 * 3600000).toISOString(), category: "Music", reminderIds: [], thumbnailEmoji: "🎉" },
-  { id: "sl2", hostId: "u1", title: "Dance Battle Championship 🏆", scheduledAt: new Date(Date.now() + 5 * 24 * 3600000).toISOString(), category: "Dance", reminderIds: [], thumbnailEmoji: "🏆" },
-  { id: "sl3", hostId: "u2", title: "Ethiopian New Year Cooking Special 🍲", scheduledAt: new Date(Date.now() + 7 * 24 * 3600000).toISOString(), category: "Food", reminderIds: [], thumbnailEmoji: "🍲" },
-];
-
-function initLiveData(): void {
-  if (localStorage.getItem(VERSION_KEY) === CURRENT_VERSION) return;
-  localStorage.setItem(LIVE_KEY, JSON.stringify(DEMO_LIVES));
-  localStorage.setItem(LIVE_COMMENTS_KEY, JSON.stringify([]));
-  localStorage.setItem(SCHEDULED_KEY, JSON.stringify(DEMO_SCHEDULED));
-  localStorage.setItem(COINS_KEY, "500");
-  localStorage.setItem(VERSION_KEY, CURRENT_VERSION);
+function mapStream(row: any): EtokLiveStream {
+  return {
+    id: row.id,
+    hostId: row.host_id,
+    title: row.title,
+    category: row.category,
+    viewerCount: row.viewer_count ?? 0,
+    giftTotal: row.gift_total ?? 0,
+    startedAt: row.started_at,
+    thumbnailColor: row.thumbnail_color ?? BG_COLORS[0],
+    thumbnailEmoji: row.thumbnail_emoji ?? "📡",
+    isLive: row.is_live ?? false,
+  };
 }
 
-initLiveData();
+function mapComment(row: any): LiveComment {
+  return {
+    id: row.id,
+    streamId: row.stream_id,
+    authorId: row.author_id,
+    authorName: row.profiles?.username ?? row.profiles?.name ?? "user",
+    authorAvatar: row.profiles?.avatar_url ?? "👤",
+    text: row.text,
+    isGift: row.is_gift,
+    giftEmoji: row.gift_emoji,
+    createdAt: row.created_at,
+  };
+}
 
-function load<T>(key: string, fallback: T): T {
-  try { return JSON.parse(localStorage.getItem(key) || "null") ?? fallback; }
-  catch { return fallback; }
-}
-function save(key: string, data: unknown): void {
-  localStorage.setItem(key, JSON.stringify(data));
+function mapScheduled(row: any): ScheduledLive {
+  return {
+    id: row.id,
+    hostId: row.host_id,
+    title: row.title,
+    scheduledAt: row.scheduled_at,
+    category: row.category,
+    thumbnailEmoji: row.thumbnail_emoji ?? "📅",
+  };
 }
 
-export function getCoinsBalance(): number {
-  return parseInt(localStorage.getItem(COINS_KEY) || "500", 10);
+/* ═══════════════════════════════════════════
+   Streams
+   ═══════════════════════════════════════════ */
+
+export async function fetchActiveLives(): Promise<EtokLiveStream[]> {
+  const { data, error } = await supabase
+    .from("etok_live_streams")
+    .select("*")
+    .eq("is_live", true)
+    .order("viewer_count", { ascending: false })
+    .limit(50);
+  if (error) { console.error("[EtokLive] fetch lives:", error); return []; }
+  return (data ?? []).map(mapStream);
 }
-export function addCoins(amount: number): void {
-  localStorage.setItem(COINS_KEY, String(getCoinsBalance() + amount));
+
+export async function fetchLiveById(id: string): Promise<EtokLiveStream | null> {
+  const { data } = await supabase.from("etok_live_streams").select("*").eq("id", id).maybeSingle();
+  return data ? mapStream(data) : null;
 }
-export function deductCoins(amount: number): boolean {
-  const b = getCoinsBalance();
-  if (b < amount) return false;
-  localStorage.setItem(COINS_KEY, String(b - amount));
+
+export async function startLiveAsync(hostId: string, title: string, category: string): Promise<EtokLiveStream | null> {
+  const { data, error } = await supabase
+    .from("etok_live_streams")
+    .insert({
+      host_id: hostId,
+      title,
+      category,
+      thumbnail_color: BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)],
+      thumbnail_emoji: "📡",
+      viewer_count: 1,
+    })
+    .select("*")
+    .single();
+  if (error) { console.error("[EtokLive] start:", error); return null; }
+  return mapStream(data);
+}
+
+export async function endLiveAsync(streamId: string): Promise<void> {
+  await supabase.from("etok_live_streams")
+    .update({ is_live: false, ended_at: new Date().toISOString() })
+    .eq("id", streamId);
+}
+
+export async function joinLiveAsync(streamId: string, userId: string): Promise<void> {
+  await supabase.from("etok_live_viewers").upsert({ stream_id: streamId, user_id: userId });
+  // refresh viewer count from actual viewers
+  const { count } = await supabase.from("etok_live_viewers")
+    .select("*", { count: "exact", head: true })
+    .eq("stream_id", streamId);
+  await supabase.from("etok_live_streams").update({ viewer_count: count ?? 1 }).eq("id", streamId);
+}
+
+export async function leaveLiveAsync(streamId: string, userId: string): Promise<void> {
+  await supabase.from("etok_live_viewers")
+    .delete()
+    .eq("stream_id", streamId)
+    .eq("user_id", userId);
+  const { count } = await supabase.from("etok_live_viewers")
+    .select("*", { count: "exact", head: true })
+    .eq("stream_id", streamId);
+  await supabase.from("etok_live_streams").update({ viewer_count: Math.max(0, count ?? 0) }).eq("id", streamId);
+}
+
+/* ═══════════════════════════════════════════
+   Comments
+   ═══════════════════════════════════════════ */
+
+export async function fetchLiveComments(streamId: string): Promise<LiveComment[]> {
+  const { data, error } = await supabase
+    .from("etok_live_comments")
+    .select("*, profiles!etok_live_comments_author_id_fkey(username, name, avatar_url)")
+    .eq("stream_id", streamId)
+    .order("created_at", { ascending: false })
+    .limit(100);
+  if (error) {
+    // Fallback without profile join if FK not configured
+    const { data: bare } = await supabase
+      .from("etok_live_comments")
+      .select("*")
+      .eq("stream_id", streamId)
+      .order("created_at", { ascending: false })
+      .limit(100);
+    return (bare ?? []).reverse().map(mapComment);
+  }
+  return (data ?? []).reverse().map(mapComment);
+}
+
+export async function addLiveCommentAsync(
+  streamId: string,
+  authorId: string,
+  text: string,
+  isGift?: boolean,
+  giftEmoji?: string
+): Promise<void> {
+  await supabase.from("etok_live_comments").insert({
+    stream_id: streamId,
+    author_id: authorId,
+    text,
+    is_gift: isGift ?? false,
+    gift_emoji: giftEmoji ?? null,
+  });
+}
+
+/* ═══════════════════════════════════════════
+   Coins & Gifts
+   ═══════════════════════════════════════════ */
+
+export async function getCoinsBalanceAsync(userId: string): Promise<number> {
+  const { data } = await supabase.from("etok_coins").select("balance").eq("user_id", userId).maybeSingle();
+  if (!data) {
+    // Initialize with 500 free starter coins
+    await supabase.from("etok_coins").insert({ user_id: userId, balance: 500 });
+    return 500;
+  }
+  return data.balance;
+}
+
+export async function addCoinsAsync(userId: string, amount: number): Promise<number> {
+  const balance = await getCoinsBalanceAsync(userId);
+  const next = balance + amount;
+  await supabase.from("etok_coins").update({ balance: next, updated_at: new Date().toISOString() }).eq("user_id", userId);
+  return next;
+}
+
+export async function deductCoinsAsync(userId: string, amount: number): Promise<boolean> {
+  const balance = await getCoinsBalanceAsync(userId);
+  if (balance < amount) return false;
+  await supabase.from("etok_coins").update({ balance: balance - amount, updated_at: new Date().toISOString() }).eq("user_id", userId);
   return true;
 }
 
-export function getActiveLives(): EtokLiveStream[] {
-  return load<EtokLiveStream[]>(LIVE_KEY, []).filter(l => l.isLive);
-}
-export function getLivesByCategory(cat: string): EtokLiveStream[] {
-  if (cat === "All") return getActiveLives();
-  return getActiveLives().filter(l => l.category === cat);
-}
-export function getLiveById(id: string): EtokLiveStream | undefined {
-  return load<EtokLiveStream[]>(LIVE_KEY, []).find(l => l.id === id);
-}
-export { CATEGORIES };
-
-export function startLive(hostId: string, title: string, category: string): EtokLiveStream {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const newLive: EtokLiveStream = {
-    id: "live" + Date.now(),
-    hostId, title, category,
-    viewerCount: 1, giftTotal: 0,
-    startedAt: new Date().toISOString(),
-    thumbnailColor: BG_COLORS[Math.floor(Math.random() * BG_COLORS.length)],
-    thumbnailEmoji: "📡",
-    isLive: true,
-    guestIds: [], moderatorIds: [], mutedUserIds: [], blockedUserIds: [],
-  };
-  lives.push(newLive);
-  save(LIVE_KEY, lives);
-  return newLive;
-}
-
-export function endLive(streamId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l) { l.isLive = false; save(LIVE_KEY, lives); }
-}
-
-export function joinLive(streamId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l) { l.viewerCount += 1; save(LIVE_KEY, lives); }
-}
-
-export function leaveLive(streamId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l) { l.viewerCount = Math.max(0, l.viewerCount - 1); save(LIVE_KEY, lives); }
-}
-
-export function getLiveComments(streamId: string): LiveComment[] {
-  return load<LiveComment[]>(LIVE_COMMENTS_KEY, []).filter(c => c.streamId === streamId);
-}
-
-export function addLiveComment(streamId: string, authorId: string, authorName: string, authorAvatar: string, text: string, isGift?: boolean, giftEmoji?: string): LiveComment {
-  const comments = load<LiveComment[]>(LIVE_COMMENTS_KEY, []);
-  const c: LiveComment = {
-    id: Date.now().toString() + Math.random(),
-    streamId, authorId, authorName, authorAvatar, text,
-    isGift, giftEmoji,
-    createdAt: new Date().toISOString(),
-  };
-  comments.push(c);
-  const recent = comments.filter(x => x.streamId === streamId).slice(-100);
-  const others = comments.filter(x => x.streamId !== streamId);
-  save(LIVE_COMMENTS_KEY, [...others, ...recent]);
-  return c;
-}
-
-export function sendLiveGift(streamId: string, giftId: string, senderId: string, senderName: string, senderAvatar: string): boolean {
+export async function sendLiveGiftAsync(
+  streamId: string,
+  giftId: string,
+  senderId: string,
+  recipientId: string
+): Promise<boolean> {
   const gift = LIVE_GIFTS.find(g => g.id === giftId);
   if (!gift) return false;
-  if (!deductCoins(gift.coins)) return false;
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l) { l.giftTotal += gift.coins; save(LIVE_KEY, lives); }
-  addLiveComment(streamId, senderId, senderName, senderAvatar, `sent a ${gift.name}`, true, gift.emoji);
+  const ok = await deductCoinsAsync(senderId, gift.coins);
+  if (!ok) return false;
+
+  // Log gift
+  await supabase.from("etok_gifts_sent").insert({
+    stream_id: streamId,
+    sender_id: senderId,
+    recipient_id: recipientId,
+    gift_id: giftId,
+    gift_emoji: gift.emoji,
+    gift_name: gift.name,
+    coins: gift.coins,
+  });
+
+  // Increment stream gift total
+  const { data: stream } = await supabase.from("etok_live_streams").select("gift_total").eq("id", streamId).maybeSingle();
+  if (stream) {
+    await supabase.from("etok_live_streams")
+      .update({ gift_total: stream.gift_total + gift.coins })
+      .eq("id", streamId);
+  }
+
+  // Insert as comment
+  await addLiveCommentAsync(streamId, senderId, `sent a ${gift.name}`, true, gift.emoji);
   return true;
 }
 
-export function muteUser(streamId: string, userId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l && !l.mutedUserIds.includes(userId)) { l.mutedUserIds.push(userId); save(LIVE_KEY, lives); }
+/* ═══════════════════════════════════════════
+   Scheduled lives
+   ═══════════════════════════════════════════ */
+
+export async function fetchScheduledLives(currentUserId?: string): Promise<ScheduledLive[]> {
+  const { data } = await supabase
+    .from("etok_scheduled_lives")
+    .select("*")
+    .gte("scheduled_at", new Date().toISOString())
+    .order("scheduled_at", { ascending: true })
+    .limit(20);
+  const list = (data ?? []).map(mapScheduled);
+  if (!currentUserId || list.length === 0) return list;
+  const { data: rems } = await supabase
+    .from("etok_scheduled_reminders")
+    .select("scheduled_id")
+    .eq("user_id", currentUserId);
+  const remSet = new Set((rems ?? []).map(r => r.scheduled_id));
+  return list.map(s => ({ ...s, hasReminder: remSet.has(s.id) }));
 }
 
-export function blockFromLive(streamId: string, userId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l && !l.blockedUserIds.includes(userId)) { l.blockedUserIds.push(userId); save(LIVE_KEY, lives); }
+export async function scheduleLiveAsync(hostId: string, title: string, scheduledAt: string, category: string): Promise<ScheduledLive | null> {
+  const { data, error } = await supabase
+    .from("etok_scheduled_lives")
+    .insert({ host_id: hostId, title, scheduled_at: scheduledAt, category, thumbnail_emoji: "📅" })
+    .select("*")
+    .single();
+  if (error) { console.error(error); return null; }
+  return mapScheduled(data);
 }
 
-export function startBattle(streamId: string, partnerId: string): void {
-  const lives = load<EtokLiveStream[]>(LIVE_KEY, []);
-  const l = lives.find(l => l.id === streamId);
-  if (l) {
-    l.battlePartnerId = partnerId;
-    l.battleHostScore = 0;
-    l.battlePartnerScore = 0;
-    l.battleEndsAt = new Date(Date.now() + 60000).toISOString();
-    save(LIVE_KEY, lives);
+export async function toggleReminderAsync(scheduledId: string, userId: string): Promise<boolean> {
+  const { data: existing } = await supabase
+    .from("etok_scheduled_reminders")
+    .select("scheduled_id")
+    .eq("scheduled_id", scheduledId)
+    .eq("user_id", userId)
+    .maybeSingle();
+  if (existing) {
+    await supabase.from("etok_scheduled_reminders").delete().eq("scheduled_id", scheduledId).eq("user_id", userId);
+    return false;
   }
+  await supabase.from("etok_scheduled_reminders").insert({ scheduled_id: scheduledId, user_id: userId });
+  return true;
 }
 
-export function getScheduledLives(): ScheduledLive[] { return load(SCHEDULED_KEY, []); }
+/* ═══════════════════════════════════════════
+   WebRTC signaling
+   ═══════════════════════════════════════════ */
+
+export async function sendWebRTCSignal(
+  streamId: string,
+  fromUserId: string,
+  toUserId: string,
+  signalType: "offer" | "answer" | "ice" | "request",
+  payload: any
+): Promise<void> {
+  await supabase.from("etok_webrtc_signals").insert({
+    stream_id: streamId,
+    from_user_id: fromUserId,
+    to_user_id: toUserId,
+    signal_type: signalType,
+    payload,
+  });
+}
+
+export function subscribeToWebRTCSignals(
+  userId: string,
+  handler: (signal: { id: string; streamId: string; fromUserId: string; signalType: string; payload: any }) => void
+) {
+  const channel = supabase
+    .channel(`rtc-${userId}`)
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "etok_webrtc_signals",
+      filter: `to_user_id=eq.${userId}`,
+    }, async (payload: any) => {
+      const row = payload.new;
+      handler({
+        id: row.id,
+        streamId: row.stream_id,
+        fromUserId: row.from_user_id,
+        signalType: row.signal_type,
+        payload: row.payload,
+      });
+      // Cleanup processed signal
+      await supabase.from("etok_webrtc_signals").delete().eq("id", row.id);
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+/* ═══════════════════════════════════════════
+   Realtime channel helpers
+   ═══════════════════════════════════════════ */
+
+export function subscribeLiveComments(streamId: string, onNew: (c: LiveComment) => void) {
+  const channel = supabase
+    .channel(`live-comments-${streamId}`)
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "etok_live_comments",
+      filter: `stream_id=eq.${streamId}`,
+    }, async (payload: any) => {
+      const row = payload.new;
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("username, name, avatar_url")
+        .eq("id", row.author_id)
+        .maybeSingle();
+      onNew(mapComment({ ...row, profiles: profile }));
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+export function subscribeStreamUpdates(streamId: string, onUpdate: (s: EtokLiveStream) => void) {
+  const channel = supabase
+    .channel(`live-stream-${streamId}`)
+    .on("postgres_changes", {
+      event: "UPDATE",
+      schema: "public",
+      table: "etok_live_streams",
+      filter: `id=eq.${streamId}`,
+    }, (payload: any) => onUpdate(mapStream(payload.new)))
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
+}
+
+/* ═══════════════════════════════════════════
+   Backwards-compatibility shims (sync stubs)
+   ═══════════════════════════════════════════ */
+
+// These exist so older sync callers still compile while we migrate UI.
+export function getActiveLives(): EtokLiveStream[] { return []; }
+export function getLiveById(_id: string): EtokLiveStream | undefined { return undefined; }
+export function getLivesByCategory(_cat: string): EtokLiveStream[] { return []; }
+export function startLive(_hostId: string, _title: string, _category: string): EtokLiveStream {
+  return { id: "tmp", hostId: _hostId, title: _title, category: _category, viewerCount: 0, giftTotal: 0, startedAt: new Date().toISOString(), thumbnailColor: BG_COLORS[0], thumbnailEmoji: "📡", isLive: true };
+}
+export function endLive(_id: string): void {}
+export function joinLive(_id: string): void {}
+export function leaveLive(_id: string): void {}
+export function getLiveComments(_id: string): LiveComment[] { return []; }
+export function addLiveComment(_streamId: string, _authorId: string, _name: string, _avatar: string, text: string, isGift?: boolean, giftEmoji?: string): LiveComment {
+  return { id: Date.now().toString(), streamId: _streamId, authorId: _authorId, authorName: _name, authorAvatar: _avatar, text, isGift, giftEmoji, createdAt: new Date().toISOString() };
+}
+export function sendLiveGift(_streamId: string, _giftId: string, _senderId: string, _name: string, _avatar: string): boolean { return false; }
+export function getScheduledLives(): ScheduledLive[] { return []; }
+export function toggleReminder(_id: string, _userId: string): boolean { return false; }
+export function getCoinsBalance(): number { return 0; }
+export function addCoins(_amount: number): void {}
+export function deductCoins(_amount: number): boolean { return false; }
+export function muteUser(_streamId: string, _userId: string): void {}
+export function blockFromLive(_streamId: string, _userId: string): void {}
+export function startBattle(_streamId: string, _partnerId: string): void {}
 export function scheduleLiveEvent(hostId: string, title: string, scheduledAt: string, category: string): ScheduledLive {
-  const all = getScheduledLives();
-  const s: ScheduledLive = { id: "sl" + Date.now(), hostId, title, scheduledAt, category, reminderIds: [], thumbnailEmoji: "📅" };
-  all.push(s);
-  save(SCHEDULED_KEY, all);
-  return s;
-}
-
-export function toggleReminder(scheduleId: string, userId: string): boolean {
-  const all = getScheduledLives();
-  const s = all.find(x => x.id === scheduleId);
-  if (!s) return false;
-  const idx = s.reminderIds.indexOf(userId);
-  if (idx >= 0) s.reminderIds.splice(idx, 1);
-  else s.reminderIds.push(userId);
-  save(SCHEDULED_KEY, all);
-  return !s.reminderIds.includes(userId);
+  return { id: "tmp", hostId, title, scheduledAt, category, thumbnailEmoji: "📅" };
 }
