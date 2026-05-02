@@ -57,6 +57,7 @@ import EtokSearch from "./pages/EtokSearch";
 import EtokLive from "./pages/EtokLive";
 import EtokProfile from "./pages/EtokProfile";
 import EtokAnalytics from "./pages/EtokAnalytics";
+import EtokCreatorTools from "./pages/EtokCreatorTools";
 import EtokSettings from "./pages/EtokSettings";
 import GlobalSearch from "./pages/GlobalSearch";
 import AIAssistant from "./pages/AIAssistant";
@@ -407,6 +408,9 @@ const AppRoutes = () => {
           } />
           <Route path="/etok/analytics" element={
             isAuthenticated ? <EtokAnalytics /> : <Navigate to="/auth" replace />
+          } />
+          <Route path="/etok/creator-tools" element={
+            isAuthenticated ? <EtokCreatorTools /> : <Navigate to="/auth" replace />
           } />
           <Route path="/etok/settings" element={
             isAuthenticated ? <EtokSettings /> : <Navigate to="/auth" replace />

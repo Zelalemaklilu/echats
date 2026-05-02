@@ -14,6 +14,7 @@ import {
 } from "@/lib/etokLiveService";
 import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
+import { useEtokLiveBroadcast } from "@/hooks/useEtokLiveBroadcast";
 
 const MOCK_COMMENTS: { name: string; avatar: string; text: string }[] = [
   { name: "selam_h", avatar: "👩", text: "🔥🔥🔥 amazing!" },
@@ -151,19 +152,40 @@ const EtokLive = () => {
   const filteredLives = selectedCategory === "All" ? activeLives : activeLives.filter(l => l.category === selectedCategory);
 
   /* ─── WATCHING A LIVE STREAM ─── */
+  const isHostOfCurrent = !!currentStream && (currentStream.hostId === currentUserId || isHosting);
+  const { videoRef, error: broadcastError, isConnected: broadcastConnected } = useEtokLiveBroadcast({
+    streamId: currentStream?.id,
+    userId: currentUserId,
+    isHost: isHostOfCurrent,
+    hostId: currentStream?.hostId,
+  });
+
   if (currentStream) {
     const host = hostProfiles[currentStream.hostId];
-    const isHost = currentStream.hostId === currentUserId || isHosting;
+    const isHost = isHostOfCurrent;
 
     return (
       <div className="fixed inset-0 bg-black flex flex-col" style={{ zIndex: 100 }}>
-        {/* Stream BG */}
-        <div className={cn("absolute inset-0 bg-gradient-to-b flex items-center justify-center", currentStream.thumbnailColor)}>
-          <motion.span animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.6, 0.4] }} transition={{ repeat: Infinity, duration: 3 }} className="text-[140px]">
-            {currentStream.thumbnailEmoji}
-          </motion.span>
-        </div>
-        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-black/30" />
+        {/* Live video stream */}
+        <video
+          ref={videoRef}
+          autoPlay
+          playsInline
+          muted={isHost}
+          className="absolute inset-0 w-full h-full object-cover bg-black"
+        />
+        {/* Fallback gradient + emoji while connecting */}
+        {!broadcastConnected && (
+          <div className={cn("absolute inset-0 bg-gradient-to-b flex items-center justify-center", currentStream.thumbnailColor)}>
+            <motion.span animate={{ scale: [1, 1.05, 1], opacity: [0.4, 0.6, 0.4] }} transition={{ repeat: Infinity, duration: 3 }} className="text-[140px]">
+              {currentStream.thumbnailEmoji}
+            </motion.span>
+            <div className="absolute bottom-1/3 text-white/80 text-sm font-semibold">
+              {broadcastError ? `⚠️ ${broadcastError}` : isHost ? "Starting camera..." : "Connecting to host..."}
+            </div>
+          </div>
+        )}
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/30 pointer-events-none" />
 
         {/* Gift animation */}
         <AnimatePresence>
