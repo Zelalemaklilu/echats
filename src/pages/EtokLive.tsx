@@ -14,6 +14,7 @@ import {
 } from "@/lib/etokLiveService";
 import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
+import { useEtokLiveBroadcast } from "@/hooks/useEtokLiveBroadcast";
 
 const MOCK_COMMENTS: { name: string; avatar: string; text: string }[] = [
   { name: "selam_h", avatar: "👩", text: "🔥🔥🔥 amazing!" },
