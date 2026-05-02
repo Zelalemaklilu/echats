@@ -118,7 +118,10 @@ const EtokProfile = () => {
         <span className="font-bold text-[16px]">@{profile?.username}</span>
         <div className="flex items-center gap-3">
           {isOwn && (
-            <button onClick={() => navigate("/etok/analytics")}><BarChart2 className="h-5 w-5 text-white/70" /></button>
+            <>
+              <button onClick={() => navigate("/etok/creator-tools")} title="Creator Tools"><Briefcase className="h-5 w-5 text-white/70" /></button>
+              <button onClick={() => navigate("/etok/analytics")} title="Analytics"><BarChart2 className="h-5 w-5 text-white/70" /></button>
+            </>
           )}
           <button onClick={() => setShowMore(true)}><MoreHorizontal className="h-6 w-6 text-white" /></button>
         </div>
