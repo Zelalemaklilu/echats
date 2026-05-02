@@ -1,7 +1,7 @@
 // @ts-nocheck
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { ArrowLeft, MoreHorizontal, Settings, Share2, MessageSquare, Edit3, CheckCircle2, BarChart2, Lock, Grid3X3, Heart, Bookmark } from "lucide-react";
+import { ArrowLeft, MoreHorizontal, Settings, Share2, MessageSquare, Edit3, CheckCircle2, BarChart2, Lock, Grid3X3, Heart, Bookmark, Briefcase } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
