@@ -420,45 +420,65 @@ export function formatCount(n: number): string {
   return n.toString();
 }
 
-// Static data for sounds/hashtags (no DB table for these yet)
-const DEMO_SOUNDS: EtokSound[] = [
-  { id: "s1", title: "Flowers - Miley Cyrus", authorName: "Miley Cyrus", coverEmoji: "🌸", duration: 180, videoCount: 2400000, isOriginal: false },
-  { id: "s2", title: "As It Was - Harry Styles", authorName: "Harry Styles", coverEmoji: "🎸", duration: 167, videoCount: 5100000, isOriginal: false },
-  { id: "s3", title: "Calm Piano Vibes", authorName: "lofi_beats", coverEmoji: "🎹", duration: 120, videoCount: 890000, isOriginal: false },
-  { id: "s4", title: "Original Sound", authorName: "etok_user", coverEmoji: "🎤", duration: 30, videoCount: 1, isOriginal: true },
-  { id: "s5", title: "Dance Monkey - Tones and I", authorName: "Tones and I", coverEmoji: "🐒", duration: 210, videoCount: 8800000, isOriginal: false },
-  { id: "s6", title: "Aesthetic Vibe", authorName: "aesthetic.music", coverEmoji: "✨", duration: 90, videoCount: 3200000, isOriginal: false },
-];
+/* ═══════════════════════════════════════════
+   Sounds & Hashtags (DB-backed)
+   ═══════════════════════════════════════════ */
 
-const DEMO_HASHTAGS: EtokHashtag[] = [
-  { id: "h1", name: "fyp", viewCount: 45000000000, trending: true },
-  { id: "h2", name: "foryou", viewCount: 30000000000, trending: true },
-  { id: "h3", name: "viral", viewCount: 20000000000, trending: true },
-  { id: "h4", name: "dance", viewCount: 8000000000, trending: true },
-  { id: "h5", name: "funny", viewCount: 15000000000, trending: true },
-  { id: "h6", name: "cooking", viewCount: 4000000000, trending: false },
-  { id: "h7", name: "travel", viewCount: 6000000000, trending: true },
-  { id: "h8", name: "fitness", viewCount: 3500000000, trending: false },
-  { id: "h9", name: "ethiopia", viewCount: 900000000, trending: true },
-  { id: "h10", name: "addisababa", viewCount: 400000000, trending: false },
-  { id: "h11", name: "music", viewCount: 12000000000, trending: true },
-  { id: "h12", name: "art", viewCount: 2800000000, trending: false },
-];
+function mapSound(r: any): EtokSound {
+  return {
+    id: r.id,
+    title: r.title,
+    authorName: r.author_name,
+    coverEmoji: r.cover_emoji,
+    duration: r.duration,
+    videoCount: r.video_count,
+    isOriginal: r.is_original,
+  };
+}
 
-export function getAllSounds(): EtokSound[] { return DEMO_SOUNDS; }
-export function getSoundById(id: string): EtokSound | undefined { return DEMO_SOUNDS.find(s => s.id === id); }
-export function getAllHashtags(): EtokHashtag[] { return DEMO_HASHTAGS; }
-export function getTrendingHashtags(): EtokHashtag[] {
-  return DEMO_HASHTAGS.filter(h => h.trending).sort((a, b) => b.viewCount - a.viewCount);
+function mapHashtag(r: any): EtokHashtag {
+  return { id: r.id, name: r.name, viewCount: Number(r.view_count) || 0, trending: r.trending };
 }
-export function searchSounds(query: string): EtokSound[] {
-  const q = query.toLowerCase();
-  return DEMO_SOUNDS.filter(s => s.title.toLowerCase().includes(q) || s.authorName.toLowerCase().includes(q));
+
+export async function fetchAllSounds(): Promise<EtokSound[]> {
+  const { data } = await supabase.from("etok_sounds").select("*").order("video_count", { ascending: false });
+  return (data ?? []).map(mapSound);
 }
-export function searchHashtags(query: string): EtokHashtag[] {
-  const q = query.toLowerCase().replace(/^#/, "");
-  return DEMO_HASHTAGS.filter(h => h.name.toLowerCase().includes(q));
+
+export async function fetchSoundById(id: string): Promise<EtokSound | null> {
+  const { data } = await supabase.from("etok_sounds").select("*").eq("id", id).maybeSingle();
+  return data ? mapSound(data) : null;
 }
+
+export async function fetchAllHashtags(): Promise<EtokHashtag[]> {
+  const { data } = await supabase.from("etok_hashtags").select("*").order("view_count", { ascending: false });
+  return (data ?? []).map(mapHashtag);
+}
+
+export async function fetchTrendingHashtags(): Promise<EtokHashtag[]> {
+  const { data } = await supabase
+    .from("etok_hashtags").select("*").eq("trending", true).order("view_count", { ascending: false });
+  return (data ?? []).map(mapHashtag);
+}
+
+export async function searchSoundsAsync(query: string): Promise<EtokSound[]> {
+  const q = query.trim();
+  if (!q) return [];
+  const { data } = await supabase
+    .from("etok_sounds").select("*")
+    .or(`title.ilike.%${q}%,author_name.ilike.%${q}%`)
+    .limit(50);
+  return (data ?? []).map(mapSound);
+}
+
+export async function searchHashtagsAsync(query: string): Promise<EtokHashtag[]> {
+  const q = query.trim().replace(/^#/, "");
+  if (!q) return [];
+  const { data } = await supabase
+    .from("etok_hashtags").select("*").ilike("name", `%${q}%`).limit(50);
+  return (data ?? []).map(mapHashtag);
+}
+
 
 /* ═══════════════════════════════════════════
    Sync compatibility shims (for pages that use synchronous APIs)
