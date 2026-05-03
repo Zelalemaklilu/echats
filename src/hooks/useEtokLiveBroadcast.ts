@@ -1,10 +1,11 @@
 // @ts-nocheck
 import { useEffect, useRef, useState } from "react";
 import { sendWebRTCSignal, subscribeToWebRTCSignals } from "@/lib/etokLiveService";
+import { getEtokIceServers } from "@/lib/etokIceServers";
 
-const ICE_SERVERS: RTCIceServer[] = [
+const FALLBACK_ICE: RTCIceServer[] = [
+  { urls: "stun:stun.cloudflare.com:3478" },
   { urls: "stun:stun.l.google.com:19302" },
-  { urls: "stun:stun1.l.google.com:19302" },
 ];
 
 interface BroadcastOptions {
