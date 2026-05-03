@@ -1,7 +1,11 @@
 // Cloudflare Calls TURN ephemeral credentials issuer
 // Returns short-lived ICE servers (STUN + TURN) for WebRTC clients.
-import { corsHeaders } from "@supabase/supabase-js/cors";
 import { createClient } from "jsr:@supabase/supabase-js@2";
+
+const corsHeaders = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+};
 
 Deno.serve(async (req) => {
   if (req.method === "OPTIONS") return new Response("ok", { headers: corsHeaders });
