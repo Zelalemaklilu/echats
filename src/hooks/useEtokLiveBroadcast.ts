@@ -40,9 +40,11 @@ export function useEtokLiveBroadcast({ streamId, userId, isHost, hostId }: Broad
   useEffect(() => {
     if (!streamId || !isHost || !userId) return;
     let cancelled = false;
+    let iceServers: RTCIceServer[] = FALLBACK_ICE;
 
     (async () => {
       try {
+        iceServers = await getEtokIceServers();
         const stream = await navigator.mediaDevices.getUserMedia({
           video: { width: { ideal: 720 }, height: { ideal: 1280 }, facingMode: "user" },
           audio: true,
@@ -62,7 +64,7 @@ export function useEtokLiveBroadcast({ streamId, userId, isHost, hostId }: Broad
 
       if (sig.signalType === "request") {
         // Viewer wants to join → create new RTCPeerConnection and send offer
-        const pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        const pc = new RTCPeerConnection({ iceServers });
         peersRef.current.set(sig.fromUserId, pc);
 
         if (localStreamRef.current) {
@@ -109,12 +111,16 @@ export function useEtokLiveBroadcast({ streamId, userId, isHost, hostId }: Broad
     if (!streamId || isHost || !userId || !hostId) return;
     let cancelled = false;
     let pc: RTCPeerConnection | null = null;
+    let iceServers: RTCIceServer[] = FALLBACK_ICE;
+
+    // Pre-fetch credentials so they're ready when the offer arrives
+    getEtokIceServers().then((s) => { iceServers = s; }).catch(() => {});
 
     const unsub = subscribeToWebRTCSignals(userId, async (sig) => {
       if (sig.streamId !== streamId) return;
 
       if (sig.signalType === "offer") {
-        pc = new RTCPeerConnection({ iceServers: ICE_SERVERS });
+        pc = new RTCPeerConnection({ iceServers });
         peersRef.current.set(hostId, pc);
 
         const remoteStream = new MediaStream();
