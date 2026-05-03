@@ -5,12 +5,12 @@ import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  searchVideosAsync, searchUsersAsync, searchSounds, searchHashtags,
-  getTrendingHashtags, getAllSounds, checkIsFollowing, toggleFollowAsync,
+  searchVideosAsync, searchUsersAsync, searchSoundsAsync, searchHashtagsAsync,
+  fetchTrendingHashtags, fetchAllSounds, checkIsFollowing, toggleFollowAsync,
   formatCount,
   type EtokVideo, type EtokUser, type EtokHashtag, type EtokSound,
 } from "@/lib/etokService";
-import { getActiveLives } from "@/lib/etokLiveService";
+import { fetchActiveLives, type EtokLiveStream } from "@/lib/etokLiveService";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
 type ResultTab = "top" | "users" | "videos" | "sounds" | "live";
@@ -116,14 +116,16 @@ const EtokSearch = () => {
   const [soundResults, setSoundResults] = useState<EtokSound[]>([]);
   const [hashtagResults, setHashtagResults] = useState<EtokHashtag[]>([]);
   const [suggestedUsers, setSuggestedUsers] = useState<EtokUser[]>([]);
+  const [trendingHashtags, setTrendingHashtags] = useState<EtokHashtag[]>([]);
+  const [trendingSounds, setTrendingSounds] = useState<EtokSound[]>([]);
+  const [activeLives, setActiveLives] = useState<EtokLiveStream[]>([]);
 
-  const trendingHashtags = getTrendingHashtags();
-  const trendingSounds = getAllSounds().sort((a, b) => b.videoCount - a.videoCount).slice(0, 5);
-  const activeLives = getActiveLives();
-
-  // Load suggested users on mount
+  // Load suggestions, trending data, and active lives on mount
   useEffect(() => {
     searchUsersAsync("").then(users => setSuggestedUsers(users.slice(0, 10)));
+    fetchTrendingHashtags().then(setTrendingHashtags);
+    fetchAllSounds().then(s => setTrendingSounds(s.slice(0, 5)));
+    fetchActiveLives().then(setActiveLives);
   }, []);
 
   // Search with debounce
@@ -136,14 +138,16 @@ const EtokSearch = () => {
       return;
     }
     const timer = setTimeout(async () => {
-      const [videos, users] = await Promise.all([
+      const [videos, users, sounds, hashtags] = await Promise.all([
         searchVideosAsync(query),
         searchUsersAsync(query),
+        searchSoundsAsync(query),
+        searchHashtagsAsync(query),
       ]);
       setVideoResults(videos);
       setUserResults(users);
-      setSoundResults(searchSounds(query));
-      setHashtagResults(searchHashtags(query));
+      setSoundResults(sounds);
+      setHashtagResults(hashtags);
       setActiveTab("top");
     }, 300);
     return () => clearTimeout(timer);
