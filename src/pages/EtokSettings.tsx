@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Shield, MessageCircle, Clock, ChevronRight, Bell, Eye, Lock, UserX, Globe, Search, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,7 +8,7 @@ import {
   getPrivacySettings, savePrivacySettings, getBlockedUsers, unblockUser,
   getScreenTimeToday, type EtokPrivacySettings, type BlockedUser,
 } from "@/lib/etokPrivacyService";
-import { getUserById } from "@/lib/etokService";
+import { fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { toast } from "sonner";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
@@ -17,14 +17,26 @@ type SettingsSection = "main" | "privacy" | "comments" | "screen_time" | "blocke
 const EtokSettings = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
+  const currentUserId = user?.id ?? "";
 
   const [section, setSection] = useState<SettingsSection>("main");
   const [settings, setSettings] = useState<EtokPrivacySettings>(() => getPrivacySettings(currentUserId));
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>(() => getBlockedUsers(currentUserId));
+  const [blockedProfiles, setBlockedProfiles] = useState<Record<string, EtokUser>>({});
   const [keywordInput, setKeywordInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const todayMinutes = getScreenTimeToday();
+
+  // Load profile data for blocked users
+  useEffect(() => {
+    blockedUsers.forEach(bu => {
+      if (!blockedProfiles[bu.blockedId]) {
+        fetchEtokProfile(bu.blockedId).then(p => {
+          if (p) setBlockedProfiles(prev => ({ ...prev, [bu.blockedId]: p }));
+        });
+      }
+    });
+  }, [blockedUsers]);
 
   const save = (updated: EtokPrivacySettings) => {
     savePrivacySettings(updated);

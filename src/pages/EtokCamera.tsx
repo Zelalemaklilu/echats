@@ -58,7 +58,7 @@ const BG_COLORS = [
 const EtokCamera = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "u1";
+  const currentUserId = user?.id ?? "";
 
   const [stage, setStage] = useState<Stage>("record");
   const [recording, setRecording] = useState(false);

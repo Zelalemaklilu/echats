@@ -17,7 +17,7 @@ const PULL_THRESHOLD = 72;
 const Etok = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo";
+  const currentUserId = user?.id ?? "";
 
   const [activeTab, setActiveTab] = useState<FeedTab>("fyp");
   const [videos, setVideos] = useState<EtokVideo[]>([]);
