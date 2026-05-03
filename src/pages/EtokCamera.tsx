@@ -8,7 +8,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { cn } from "@/lib/utils";
 import { toast } from "sonner";
 import { useAuth } from "@/contexts/AuthContext";
-import { uploadVideoAsync as uploadVideo, getAllSounds, type EtokSound } from "@/lib/etokService";
+import { uploadVideoAsync as uploadVideo, fetchAllSounds, type EtokSound } from "@/lib/etokService";
 
 type Stage = "record" | "preview" | "edit" | "post";
 type VideoPrivacy = "everyone" | "friends" | "only_me";
@@ -58,7 +58,7 @@ const BG_COLORS = [
 const EtokCamera = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "u1";
+  const currentUserId = user?.id ?? "";
 
   const [stage, setStage] = useState<Stage>("record");
   const [recording, setRecording] = useState(false);
@@ -104,7 +104,8 @@ const EtokCamera = () => {
   const timerRef = useRef<ReturnType<typeof setInterval>>();
   const countdownRef = useRef<ReturnType<typeof setInterval>>();
 
-  const sounds = getAllSounds();
+  const [sounds, setSounds] = useState<EtokSound[]>([]);
+  useEffect(() => { fetchAllSounds().then(setSounds); }, []);
 
   const startCamera = useCallback(async () => {
     try {

@@ -16,16 +16,6 @@ import { formatCount, fetchEtokProfile, type EtokUser } from "@/lib/etokService"
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 import { useEtokLiveBroadcast } from "@/hooks/useEtokLiveBroadcast";
 
-const MOCK_COMMENTS: { name: string; avatar: string; text: string }[] = [
-  { name: "selam_h", avatar: "👩", text: "🔥🔥🔥 amazing!" },
-  { name: "biruk_t", avatar: "👦", text: "Love this content!" },
-  { name: "tigist_w", avatar: "💪", text: "❤️❤️❤️" },
-  { name: "abel_g", avatar: "✈️", text: "Let's go!! 🚀" },
-  { name: "meron_a", avatar: "🎨", text: "This is incredible 😍" },
-  { name: "yonas_b", avatar: "🎵", text: "Drop a 💎 if you're watching!" },
-  { name: "hana_b", avatar: "👗", text: "Obsessed 🫶" },
-  { name: "kebede_s", avatar: "🕺", text: "Who's watching from Addis? 🇪🇹" },
-];
 
 const EtokLive = () => {
   const navigate = useNavigate();

@@ -19,7 +19,7 @@ const EtokProfile = () => {
   const navigate = useNavigate();
   const { userId } = useParams<{ userId: string }>();
   const { user: authUser } = useAuth();
-  const currentUserId = authUser?.id ?? "demo";
+  const currentUserId = authUser?.id ?? "";
 
   const resolvedId = userId ?? currentUserId;
   const isOwn = resolvedId === currentUserId;

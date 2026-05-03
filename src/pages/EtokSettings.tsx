@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ArrowLeft, Shield, MessageCircle, Clock, ChevronRight, Bell, Eye, Lock, UserX, Globe, Search, Download, Trash2 } from "lucide-react";
 import { cn } from "@/lib/utils";
@@ -8,7 +8,7 @@ import {
   getPrivacySettings, savePrivacySettings, getBlockedUsers, unblockUser,
   getScreenTimeToday, type EtokPrivacySettings, type BlockedUser,
 } from "@/lib/etokPrivacyService";
-import { getUserById } from "@/lib/etokService";
+import { fetchEtokProfile, type EtokUser } from "@/lib/etokService";
 import { toast } from "sonner";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 
@@ -17,14 +17,26 @@ type SettingsSection = "main" | "privacy" | "comments" | "screen_time" | "blocke
 const EtokSettings = () => {
   const navigate = useNavigate();
   const { user } = useAuth();
-  const currentUserId = user?.id ?? "demo_user";
+  const currentUserId = user?.id ?? "";
 
   const [section, setSection] = useState<SettingsSection>("main");
   const [settings, setSettings] = useState<EtokPrivacySettings>(() => getPrivacySettings(currentUserId));
   const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>(() => getBlockedUsers(currentUserId));
+  const [blockedProfiles, setBlockedProfiles] = useState<Record<string, EtokUser>>({});
   const [keywordInput, setKeywordInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const todayMinutes = getScreenTimeToday();
+
+  // Load profile data for blocked users
+  useEffect(() => {
+    blockedUsers.forEach(bu => {
+      if (!blockedProfiles[bu.blockedId]) {
+        fetchEtokProfile(bu.blockedId).then(p => {
+          if (p) setBlockedProfiles(prev => ({ ...prev, [bu.blockedId]: p }));
+        });
+      }
+    });
+  }, [blockedUsers]);
 
   const save = (updated: EtokPrivacySettings) => {
     savePrivacySettings(updated);
@@ -223,12 +235,14 @@ const EtokSettings = () => {
                 <p className="text-[15px]">No blocked accounts</p>
               </div>
             ) : blockedUsers.map(bu => {
-              const u = getUserById(bu.blockedId);
+              const u = blockedProfiles[bu.blockedId];
               return (
                 <div key={bu.blockedId} className="flex items-center gap-3 px-4 py-4 border-b border-white/[0.08]">
-                  <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl">{u?.avatar ?? "👤"}</div>
+                  <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl overflow-hidden">
+                    {u?.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : "👤"}
+                  </div>
                   <div className="flex-1">
-                    <p className="text-white font-semibold text-[14px]">{u?.username ?? bu.blockedId}</p>
+                    <p className="text-white font-semibold text-[14px]">{u?.username ?? "user"}</p>
                     <p className="text-white/50 text-[12px]">{u?.displayName}</p>
                   </div>
                   <button
