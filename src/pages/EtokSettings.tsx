@@ -235,12 +235,14 @@ const EtokSettings = () => {
                 <p className="text-[15px]">No blocked accounts</p>
               </div>
             ) : blockedUsers.map(bu => {
-              const u = getUserById(bu.blockedId);
+              const u = blockedProfiles[bu.blockedId];
               return (
                 <div key={bu.blockedId} className="flex items-center gap-3 px-4 py-4 border-b border-white/[0.08]">
-                  <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl">{u?.avatar ?? "👤"}</div>
+                  <div className="w-11 h-11 rounded-full bg-white/10 flex items-center justify-center text-2xl overflow-hidden">
+                    {u?.avatar ? <img src={u.avatar} alt="" className="w-full h-full object-cover" /> : "👤"}
+                  </div>
                   <div className="flex-1">
-                    <p className="text-white font-semibold text-[14px]">{u?.username ?? bu.blockedId}</p>
+                    <p className="text-white font-semibold text-[14px]">{u?.username ?? "user"}</p>
                     <p className="text-white/50 text-[12px]">{u?.displayName}</p>
                   </div>
                   <button
