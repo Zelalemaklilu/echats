@@ -130,7 +130,7 @@ export async function fetchFYPVideos(): Promise<EtokVideo[]> {
     .from("etok_videos")
     .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
     .eq("privacy", "everyone")
-    .order("views", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] FYP error:", error); return []; }
   return (data ?? []).map(mapVideo);
@@ -175,6 +175,22 @@ export async function fetchVideoById(videoId: string): Promise<EtokVideo | null>
     .single();
   if (error || !data) return null;
   return mapVideo(data);
+}
+
+export function subscribeToPublicEtokVideos(onNew: (video: EtokVideo) => void) {
+  const channel = supabase
+    .channel("etok-public-videos")
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "etok_videos",
+      filter: "privacy=eq.everyone",
+    }, async (payload: any) => {
+      const video = await fetchVideoById(payload.new.id);
+      if (video) onNew(video);
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
 }
 
 /* ═══════════════════════════════════════════
