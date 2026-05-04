@@ -362,26 +362,29 @@ export async function uploadVideoAsync(
   },
   onProgress?: (pct: number) => void
 ): Promise<EtokVideo | null> {
+  if (!metadata.authorId) {
+    throw new Error("You must be signed in to post a video");
+  }
+  if (!blob || blob.size === 0) {
+    throw new Error("Recorded video is empty");
+  }
+
   onProgress?.(10);
 
-  // Upload to storage
-  let videoUrl: string | undefined;
-  const fileName = `etok-${Date.now()}-${Math.random().toString(36).slice(2)}.webm`;
-  try {
-    const { data: storageData, error: storageError } = await supabase.storage
-      .from("etok-videos")
-      .upload(fileName, blob, { contentType: "video/webm", upsert: false });
-    if (!storageError && storageData) {
-      const { data: urlData } = supabase.storage.from("etok-videos").getPublicUrl(storageData.path);
-      videoUrl = urlData.publicUrl;
-    }
-  } catch {
-    // Fallback
+  const contentType = blob.type || "video/webm";
+  const extension = contentType.includes("mp4") ? "mp4" : "webm";
+  const filePath = `${metadata.authorId}/etok-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const { data: storageData, error: storageError } = await supabase.storage
+    .from("etok-videos")
+    .upload(filePath, blob, { contentType, upsert: false });
+
+  if (storageError || !storageData) {
+    console.error("[Etok] storage upload error:", storageError);
+    throw new Error(storageError?.message || "Video upload failed");
   }
 
-  if (!videoUrl) {
-    videoUrl = URL.createObjectURL(blob);
-  }
+  const { data: urlData } = supabase.storage.from("etok-videos").getPublicUrl(storageData.path);
+  const videoUrl = urlData.publicUrl;
 
   onProgress?.(70);
 
@@ -406,7 +409,11 @@ export async function uploadVideoAsync(
 
   onProgress?.(100);
 
-  if (error) { console.error("[Etok] upload error:", error); return null; }
+  if (error) {
+    console.error("[Etok] upload error:", error);
+    await supabase.storage.from("etok-videos").remove([storageData.path]);
+    throw new Error(error.message || "Could not save video post");
+  }
   return data ? mapVideo(data) : null;
 }
 
