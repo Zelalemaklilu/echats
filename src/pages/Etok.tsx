@@ -42,9 +42,13 @@ const Etok = () => {
   const loadVideos = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const data = activeTab === "fyp"
+      let data = activeTab === "fyp"
         ? await fetchFYPVideos()
         : await fetchFollowingVideos(currentUserId);
+      if (focusVideoId) {
+        const focusedVideo = await fetchVideoById(focusVideoId);
+        if (focusedVideo) data = [focusedVideo, ...data.filter(v => v.id !== focusedVideo.id)];
+      }
       setVideos(data);
     } catch (e) {
       console.error("[Etok] load error:", e);
@@ -52,7 +56,7 @@ const Etok = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, currentUserId]);
+  }, [activeTab, currentUserId, focusVideoId]);
 
   useEffect(() => {
     loadVideos(true);
