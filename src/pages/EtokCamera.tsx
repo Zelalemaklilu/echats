@@ -236,6 +236,15 @@ const EtokCamera = () => {
   };
 
   const handlePost = async () => {
+    if (!currentUserId) {
+      toast.error("Please sign in to post a video");
+      navigate("/auth");
+      return;
+    }
+    if (!recordedBlob || recordedBlob.size === 0) {
+      toast.error("Record a video before posting");
+      return;
+    }
     if (!description.trim()) {
       toast.error("Please add a description");
       return;
@@ -244,29 +253,31 @@ const EtokCamera = () => {
     setUploadProgress(0);
     try {
       const hashtags = description.match(/#(\w+)/g)?.map(h => h.slice(1)) ?? [];
-      if (recordedBlob) {
-        await uploadVideo(
-          recordedBlob,
-          {
-            authorId: currentUserId,
-            description,
-            hashtags,
-            soundName: selectedSound?.title ?? "Original Sound",
-            duration: Math.round(elapsed),
-            privacy,
-            allowComments,
-            allowDuet,
-            allowStitch,
-            allowDownload,
-          },
-          (pct) => setUploadProgress(pct)
-        );
+      const postedVideo = await uploadVideo(
+        recordedBlob,
+        {
+          authorId: currentUserId,
+          description,
+          hashtags,
+          soundName: selectedSound?.title ?? "Original Sound",
+          duration: Math.max(1, Math.round(elapsed)),
+          privacy,
+          allowComments,
+          allowDuet,
+          allowStitch,
+          allowDownload,
+        },
+        (pct) => setUploadProgress(pct)
+      );
+      if (!postedVideo) {
+        throw new Error("Video was not saved");
       }
       toast.success("Video posted!");
       if (recordedUrl) URL.revokeObjectURL(recordedUrl);
-      navigate("/etok");
-    } catch {
-      toast.error("Failed to post video");
+      navigate(`/etok?video=${postedVideo.id}`, { replace: true });
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "Failed to post video";
+      toast.error(message);
     } finally {
       setPosting(false);
     }
