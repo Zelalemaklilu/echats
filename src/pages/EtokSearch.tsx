@@ -294,7 +294,7 @@ const EtokSearch = () => {
                   <p className="text-white/50 text-[12px] font-semibold px-4 pt-2 pb-2 uppercase tracking-wide">Videos</p>
                   <div className="grid grid-cols-3 gap-[1px]">
                     {videoResults.slice(0, 9).map(v => (
-                      <VideoThumb key={v.id} video={v} onClick={() => navigate("/etok")} />
+                      <VideoThumb key={v.id} video={v} onClick={() => navigate(`/etok?video=${v.id}`)} />
                     ))}
                   </div>
                 </>
@@ -342,7 +342,7 @@ const EtokSearch = () => {
             ) : (
               <div className="grid grid-cols-3 gap-[1px]">
                 {videoResults.map(v => (
-                  <VideoThumb key={v.id} video={v} onClick={() => navigate("/etok")} />
+                  <VideoThumb key={v.id} video={v} onClick={() => navigate(`/etok?video=${v.id}`)} />
                 ))}
               </div>
             )

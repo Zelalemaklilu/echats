@@ -416,33 +416,3 @@ export function subscribeStreamUpdates(streamId: string, onUpdate: (s: EtokLiveS
   return () => { supabase.removeChannel(channel); };
 }
 
-/* ═══════════════════════════════════════════
-   Backwards-compatibility shims (sync stubs)
-   ═══════════════════════════════════════════ */
-
-// These exist so older sync callers still compile while we migrate UI.
-export function getActiveLives(): EtokLiveStream[] { return []; }
-export function getLiveById(_id: string): EtokLiveStream | undefined { return undefined; }
-export function getLivesByCategory(_cat: string): EtokLiveStream[] { return []; }
-export function startLive(_hostId: string, _title: string, _category: string): EtokLiveStream {
-  return { id: "tmp", hostId: _hostId, title: _title, category: _category, viewerCount: 0, giftTotal: 0, startedAt: new Date().toISOString(), thumbnailColor: BG_COLORS[0], thumbnailEmoji: "📡", isLive: true };
-}
-export function endLive(_id: string): void {}
-export function joinLive(_id: string): void {}
-export function leaveLive(_id: string): void {}
-export function getLiveComments(_id: string): LiveComment[] { return []; }
-export function addLiveComment(_streamId: string, _authorId: string, _name: string, _avatar: string, text: string, isGift?: boolean, giftEmoji?: string): LiveComment {
-  return { id: Date.now().toString(), streamId: _streamId, authorId: _authorId, authorName: _name, authorAvatar: _avatar, text, isGift, giftEmoji, createdAt: new Date().toISOString() };
-}
-export function sendLiveGift(_streamId: string, _giftId: string, _senderId: string, _name: string, _avatar: string): boolean { return false; }
-export function getScheduledLives(): ScheduledLive[] { return []; }
-export function toggleReminder(_id: string, _userId: string): boolean { return false; }
-export function getCoinsBalance(): number { return 0; }
-export function addCoins(_amount: number): void {}
-export function deductCoins(_amount: number): boolean { return false; }
-export function muteUser(_streamId: string, _userId: string): void {}
-export function blockFromLive(_streamId: string, _userId: string): void {}
-export function startBattle(_streamId: string, _partnerId: string): void {}
-export function scheduleLiveEvent(hostId: string, title: string, scheduledAt: string, category: string): ScheduledLive {
-  return { id: "tmp", hostId, title, scheduledAt, category, thumbnailEmoji: "📅" };
-}

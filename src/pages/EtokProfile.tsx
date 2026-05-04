@@ -83,7 +83,7 @@ const EtokProfile = () => {
         </div>
       ) : (
         vids.map(v => (
-          <button key={v.id} onClick={() => navigate("/etok")} className="relative aspect-[9/16] overflow-hidden rounded-sm bg-black">
+          <button key={v.id} onClick={() => navigate(`/etok?video=${v.id}`)} className="relative aspect-[9/16] overflow-hidden rounded-sm bg-black">
             {v.videoUrl ? (
               <video src={v.videoUrl} className="absolute inset-0 w-full h-full object-cover" muted preload="metadata" />
             ) : (

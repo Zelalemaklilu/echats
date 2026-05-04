@@ -130,7 +130,7 @@ export async function fetchFYPVideos(): Promise<EtokVideo[]> {
     .from("etok_videos")
     .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
     .eq("privacy", "everyone")
-    .order("views", { ascending: false })
+    .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] FYP error:", error); return []; }
   return (data ?? []).map(mapVideo);
@@ -175,6 +175,22 @@ export async function fetchVideoById(videoId: string): Promise<EtokVideo | null>
     .single();
   if (error || !data) return null;
   return mapVideo(data);
+}
+
+export function subscribeToPublicEtokVideos(onNew: (video: EtokVideo) => void) {
+  const channel = supabase
+    .channel("etok-public-videos")
+    .on("postgres_changes", {
+      event: "INSERT",
+      schema: "public",
+      table: "etok_videos",
+      filter: "privacy=eq.everyone",
+    }, async (payload: any) => {
+      const video = await fetchVideoById(payload.new.id);
+      if (video) onNew(video);
+    })
+    .subscribe();
+  return () => { supabase.removeChannel(channel); };
 }
 
 /* ═══════════════════════════════════════════
@@ -362,26 +378,29 @@ export async function uploadVideoAsync(
   },
   onProgress?: (pct: number) => void
 ): Promise<EtokVideo | null> {
+  if (!metadata.authorId) {
+    throw new Error("You must be signed in to post a video");
+  }
+  if (!blob || blob.size === 0) {
+    throw new Error("Recorded video is empty");
+  }
+
   onProgress?.(10);
 
-  // Upload to storage
-  let videoUrl: string | undefined;
-  const fileName = `etok-${Date.now()}-${Math.random().toString(36).slice(2)}.webm`;
-  try {
-    const { data: storageData, error: storageError } = await supabase.storage
-      .from("etok-videos")
-      .upload(fileName, blob, { contentType: "video/webm", upsert: false });
-    if (!storageError && storageData) {
-      const { data: urlData } = supabase.storage.from("etok-videos").getPublicUrl(storageData.path);
-      videoUrl = urlData.publicUrl;
-    }
-  } catch {
-    // Fallback
+  const contentType = blob.type || "video/webm";
+  const extension = contentType.includes("mp4") ? "mp4" : "webm";
+  const filePath = `${metadata.authorId}/etok-${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
+  const { data: storageData, error: storageError } = await supabase.storage
+    .from("etok-videos")
+    .upload(filePath, blob, { contentType, upsert: false });
+
+  if (storageError || !storageData) {
+    console.error("[Etok] storage upload error:", storageError);
+    throw new Error(storageError?.message || "Video upload failed");
   }
 
-  if (!videoUrl) {
-    videoUrl = URL.createObjectURL(blob);
-  }
+  const { data: urlData } = supabase.storage.from("etok-videos").getPublicUrl(storageData.path);
+  const videoUrl = urlData.publicUrl;
 
   onProgress?.(70);
 
@@ -406,7 +425,11 @@ export async function uploadVideoAsync(
 
   onProgress?.(100);
 
-  if (error) { console.error("[Etok] upload error:", error); return null; }
+  if (error) {
+    console.error("[Etok] upload error:", error);
+    await supabase.storage.from("etok-videos").remove([storageData.path]);
+    throw new Error(error.message || "Could not save video post");
+  }
   return data ? mapVideo(data) : null;
 }
 
@@ -479,35 +502,6 @@ export async function searchHashtagsAsync(query: string): Promise<EtokHashtag[]>
   return (data ?? []).map(mapHashtag);
 }
 
-
-/* ═══════════════════════════════════════════
-   Sync compatibility shims (for pages that use synchronous APIs)
-   ═══════════════════════════════════════════ */
-
-export function getUserById(userId: string): EtokUser | null {
-  // Returns null synchronously; callers should migrate to fetchEtokProfile
-  return null;
-}
-
-export function isFollowing(_followerId: string, _followingId: string): boolean {
-  return false;
-}
-
-export function toggleFollow(_followerId: string, _followingId: string): boolean {
-  return false;
-}
-
-export function searchVideos(_query: string): EtokVideo[] {
-  return [];
-}
-
-export function searchUsers(_query: string): EtokUser[] {
-  return [];
-}
-
-export function getSuggestedUsers(_currentUserId: string): EtokUser[] {
-  return [];
-}
 
 // Not-interested (kept in localStorage since it's client-side preference)
 const NOT_INTERESTED_KEY = "etok_not_interested";

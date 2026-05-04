@@ -1,11 +1,11 @@
 // @ts-nocheck
 import { useState, useEffect, useRef, useCallback } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { Search, Camera, Radio, RefreshCw } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
-import { fetchFYPVideos, fetchFollowingVideos, type EtokVideo } from "@/lib/etokService";
+import { fetchFYPVideos, fetchFollowingVideos, fetchVideoById, subscribeToPublicEtokVideos, type EtokVideo } from "@/lib/etokService";
 import { EtokVideoCard } from "@/components/etok/EtokVideoCard";
 import { EtokBottomNav } from "@/components/etok/EtokBottomNav";
 import { isEtokOnboarded } from "./EtokOnboarding";
@@ -16,8 +16,10 @@ const PULL_THRESHOLD = 72;
 
 const Etok = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const { user } = useAuth();
   const currentUserId = user?.id ?? "";
+  const focusVideoId = searchParams.get("video");
 
   const [activeTab, setActiveTab] = useState<FeedTab>("fyp");
   const [videos, setVideos] = useState<EtokVideo[]>([]);
@@ -40,9 +42,13 @@ const Etok = () => {
   const loadVideos = useCallback(async (showLoading = true) => {
     if (showLoading) setLoading(true);
     try {
-      const data = activeTab === "fyp"
+      let data = activeTab === "fyp"
         ? await fetchFYPVideos()
         : await fetchFollowingVideos(currentUserId);
+      if (focusVideoId) {
+        const focusedVideo = await fetchVideoById(focusVideoId);
+        if (focusedVideo) data = [focusedVideo, ...data.filter(v => v.id !== focusedVideo.id)];
+      }
       setVideos(data);
     } catch (e) {
       console.error("[Etok] load error:", e);
@@ -50,13 +56,31 @@ const Etok = () => {
       setLoading(false);
       setRefreshing(false);
     }
-  }, [activeTab, currentUserId]);
+  }, [activeTab, currentUserId, focusVideoId]);
 
   useEffect(() => {
     loadVideos(true);
     setActiveIndex(0);
     containerRef.current?.scrollTo({ top: 0 });
   }, [loadVideos]);
+
+  useEffect(() => {
+    if (!focusVideoId) return;
+    fetchVideoById(focusVideoId).then(video => {
+      if (!video) return;
+      setActiveTab("fyp");
+      setVideos(prev => [video, ...prev.filter(v => v.id !== video.id)]);
+      setActiveIndex(0);
+      containerRef.current?.scrollTo({ top: 0 });
+    });
+  }, [focusVideoId]);
+
+  useEffect(() => {
+    if (activeTab !== "fyp") return;
+    return subscribeToPublicEtokVideos(video => {
+      setVideos(prev => [video, ...prev.filter(v => v.id !== video.id)].slice(0, 50));
+    });
+  }, [activeTab]);
 
   useEffect(() => {
     const container = containerRef.current;
