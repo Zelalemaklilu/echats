@@ -302,30 +302,30 @@ export async function fetchFollowingCount(userId: string): Promise<number> {
 export async function fetchComments(videoId: string): Promise<EtokComment[]> {
   const { data, error } = await supabase
     .from("etok_comments")
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .eq("video_id", videoId)
     .is("parent_id", null)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) { console.error("[Etok] comments error:", error); return []; }
-  return (data ?? []).map(mapComment);
+  return hydrateComments(data);
 }
 
 export async function fetchReplies(parentId: string): Promise<EtokComment[]> {
   const { data } = await supabase
     .from("etok_comments")
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .eq("parent_id", parentId)
     .order("created_at", { ascending: true });
-  return (data ?? []).map(mapComment);
+  return hydrateComments(data);
 }
 
 export async function addCommentAsync(videoId: string, authorId: string, text: string, parentId?: string): Promise<EtokComment | null> {
   const { data, error } = await supabase
     .from("etok_comments")
     .insert({ video_id: videoId, author_id: authorId, text, parent_id: parentId ?? null })
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .single();
   if (error) { console.error("[Etok] add comment error:", error); return null; }
   // Increment comment count
@@ -333,7 +333,8 @@ export async function addCommentAsync(videoId: string, authorId: string, text: s
   if (vid) {
     await supabase.from("etok_videos").update({ comments: vid.comments + 1 }).eq("id", videoId);
   }
-  return data ? mapComment(data) : null;
+  const [comment] = await hydrateComments(data ? [data] : []);
+  return comment ?? null;
 }
 
 export async function deleteCommentAsync(commentId: string): Promise<void> {
