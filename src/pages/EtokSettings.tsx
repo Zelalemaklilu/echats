@@ -5,7 +5,7 @@ import { ArrowLeft, Shield, MessageCircle, Clock, ChevronRight, Bell, Eye, Lock,
 import { cn } from "@/lib/utils";
 import { useAuth } from "@/contexts/AuthContext";
 import {
-  getPrivacySettings, savePrivacySettings, getBlockedUsers, unblockUser,
+  getPrivacySettingsAsync, savePrivacySettingsAsync, getBlockedUsersAsync, unblockUserAsync,
   getScreenTimeToday, type EtokPrivacySettings, type BlockedUser,
 } from "@/lib/etokPrivacyService";
 import { fetchEtokProfile, type EtokUser } from "@/lib/etokService";
@@ -20,12 +20,20 @@ const EtokSettings = () => {
   const currentUserId = user?.id ?? "";
 
   const [section, setSection] = useState<SettingsSection>("main");
-  const [settings, setSettings] = useState<EtokPrivacySettings>(() => getPrivacySettings(currentUserId));
-  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>(() => getBlockedUsers(currentUserId));
+  const [settings, setSettings] = useState<EtokPrivacySettings | null>(null);
+  const [blockedUsers, setBlockedUsers] = useState<BlockedUser[]>([]);
   const [blockedProfiles, setBlockedProfiles] = useState<Record<string, EtokUser>>({});
   const [keywordInput, setKeywordInput] = useState("");
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const todayMinutes = getScreenTimeToday();
+
+  useEffect(() => {
+    if (!currentUserId) return;
+    Promise.all([getPrivacySettingsAsync(currentUserId), getBlockedUsersAsync(currentUserId)]).then(([s, blocked]) => {
+      setSettings(s);
+      setBlockedUsers(blocked);
+    });
+  }, [currentUserId]);
 
   // Load profile data for blocked users
   useEffect(() => {
@@ -38,11 +46,15 @@ const EtokSettings = () => {
     });
   }, [blockedUsers]);
 
-  const save = (updated: EtokPrivacySettings) => {
-    savePrivacySettings(updated);
+  const save = async (updated: EtokPrivacySettings) => {
+    await savePrivacySettingsAsync(updated);
     setSettings(updated);
     toast.success("Saved");
   };
+
+  if (!settings) {
+    return <div className="min-h-screen bg-black flex items-center justify-center"><div className="w-10 h-10 rounded-full border-4 border-white/20 border-t-white animate-spin" /></div>;
+  }
 
   const ToggleRow = ({ label, sub, val, onChange }: { label: string; sub?: string; val: boolean; onChange: (v: boolean) => void }) => (
     <div className="flex items-center gap-3 py-4 border-b border-white/[0.08]">
