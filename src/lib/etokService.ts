@@ -121,6 +121,34 @@ function mapComment(row: any): EtokComment {
   };
 }
 
+async function hydrateVideos(rows: any[] | null | undefined): Promise<EtokVideo[]> {
+  const list = rows ?? [];
+  const authorIds = [...new Set(list.map(r => r.author_id).filter(Boolean))];
+  const profilesById = new Map<string, EtokUser>();
+  if (authorIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username, name, avatar_url, bio, is_online")
+      .in("id", authorIds);
+    (data ?? []).forEach(p => profilesById.set(p.id, mapUser(p)));
+  }
+  return list.map(row => ({ ...mapVideo(row), author: profilesById.get(row.author_id) }));
+}
+
+async function hydrateComments(rows: any[] | null | undefined): Promise<EtokComment[]> {
+  const list = rows ?? [];
+  const authorIds = [...new Set(list.map(r => r.author_id).filter(Boolean))];
+  const profilesById = new Map<string, EtokUser>();
+  if (authorIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username, name, avatar_url, bio, is_online")
+      .in("id", authorIds);
+    (data ?? []).forEach(p => profilesById.set(p.id, mapUser(p)));
+  }
+  return list.map(row => ({ ...mapComment(row), author: profilesById.get(row.author_id) }));
+}
+
 /* ═══════════════════════════════════════════
    Video queries
    ═══════════════════════════════════════════ */
@@ -128,12 +156,12 @@ function mapComment(row: any): EtokComment {
 export async function fetchFYPVideos(): Promise<EtokVideo[]> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("privacy", "everyone")
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] FYP error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchFollowingVideos(userId: string): Promise<EtokVideo[]> {
@@ -147,34 +175,35 @@ export async function fetchFollowingVideos(userId: string): Promise<EtokVideo[]>
 
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .in("author_id", ids)
     .neq("privacy", "only_me")
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] following error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchUserVideos(userId: string): Promise<EtokVideo[]> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("author_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) { console.error("[Etok] user videos error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchVideoById(videoId: string): Promise<EtokVideo | null> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("id", videoId)
-    .single();
+    .maybeSingle();
   if (error || !data) return null;
-  return mapVideo(data);
+  const [video] = await hydrateVideos([data]);
+  return video ?? null;
 }
 
 export function subscribeToPublicEtokVideos(onNew: (video: EtokVideo) => void) {
@@ -207,6 +236,7 @@ export async function checkIsLiked(userId: string, videoId: string): Promise<boo
 }
 
 export async function toggleLikeAsync(userId: string, videoId: string): Promise<boolean> {
+  if (!userId) throw new Error("Please sign in first");
   const liked = await checkIsLiked(userId, videoId);
   if (liked) {
     await supabase.from("etok_likes").delete().eq("user_id", userId).eq("video_id", videoId);
@@ -240,6 +270,8 @@ export async function checkIsFollowing(followerId: string, followingId: string):
 }
 
 export async function toggleFollowAsync(followerId: string, followingId: string): Promise<boolean> {
+  if (!followerId) throw new Error("Please sign in first");
+  if (followerId === followingId) return true;
   const isFollow = await checkIsFollowing(followerId, followingId);
   if (isFollow) {
     await supabase.from("etok_follows").delete().eq("follower_id", followerId).eq("following_id", followingId);
@@ -273,30 +305,31 @@ export async function fetchFollowingCount(userId: string): Promise<number> {
 export async function fetchComments(videoId: string): Promise<EtokComment[]> {
   const { data, error } = await supabase
     .from("etok_comments")
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .eq("video_id", videoId)
     .is("parent_id", null)
     .order("is_pinned", { ascending: false })
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) { console.error("[Etok] comments error:", error); return []; }
-  return (data ?? []).map(mapComment);
+  return hydrateComments(data);
 }
 
 export async function fetchReplies(parentId: string): Promise<EtokComment[]> {
   const { data } = await supabase
     .from("etok_comments")
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .eq("parent_id", parentId)
     .order("created_at", { ascending: true });
-  return (data ?? []).map(mapComment);
+  return hydrateComments(data);
 }
 
 export async function addCommentAsync(videoId: string, authorId: string, text: string, parentId?: string): Promise<EtokComment | null> {
+  if (!authorId) throw new Error("Please sign in first");
   const { data, error } = await supabase
     .from("etok_comments")
     .insert({ video_id: videoId, author_id: authorId, text, parent_id: parentId ?? null })
-    .select("*, profiles!etok_comments_author_id_fkey(id, username, name, avatar_url)")
+    .select("*")
     .single();
   if (error) { console.error("[Etok] add comment error:", error); return null; }
   // Increment comment count
@@ -304,7 +337,8 @@ export async function addCommentAsync(videoId: string, authorId: string, text: s
   if (vid) {
     await supabase.from("etok_videos").update({ comments: vid.comments + 1 }).eq("id", videoId);
   }
-  return data ? mapComment(data) : null;
+  const [comment] = await hydrateComments(data ? [data] : []);
+  return comment ?? null;
 }
 
 export async function deleteCommentAsync(commentId: string): Promise<void> {
@@ -316,11 +350,24 @@ export async function deleteCommentAsync(commentId: string): Promise<void> {
    ═══════════════════════════════════════════ */
 
 export async function fetchEtokProfile(userId: string): Promise<EtokUser | null> {
+  if (!userId) return null;
   const { data } = await supabase
     .from("profiles")
     .select("id, username, name, avatar_url, bio, is_online")
     .eq("id", userId)
     .single();
+  return data ? mapUser(data) : null;
+}
+
+export async function updateEtokProfileAsync(userId: string, updates: { name: string; username: string; bio: string }): Promise<EtokUser | null> {
+  if (!userId) throw new Error("Please sign in first");
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ name: updates.name.trim(), username: updates.username.trim(), bio: updates.bio.trim(), updated_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select("id, username, name, avatar_url, bio, is_online")
+    .single();
+  if (error) throw new Error(error.message || "Profile update failed");
   return data ? mapUser(data) : null;
 }
 
@@ -337,15 +384,22 @@ export async function fetchTotalVideoLikes(userId: string): Promise<number> {
    ═══════════════════════════════════════════ */
 
 export async function searchVideosAsync(query: string): Promise<EtokVideo[]> {
-  const q = `%${query}%`;
+  const clean = query.trim().replace(/^#/, "");
+  if (!clean) return [];
+  const q = `%${clean}%`;
   const { data } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio)")
-    .or(`description.ilike.${q},hashtags.cs.{${query.replace(/^#/, "")}}`)
+    .select("*")
+    .or(`description.ilike.${q},sound_name.ilike.${q}`)
     .eq("privacy", "everyone")
     .order("views", { ascending: false })
     .limit(30);
-  return (data ?? []).map(mapVideo);
+  const hydrated = await hydrateVideos(data);
+  return hydrated.filter(v =>
+    v.description.toLowerCase().includes(clean.toLowerCase()) ||
+    v.soundName.toLowerCase().includes(clean.toLowerCase()) ||
+    v.hashtags.some(h => h.toLowerCase().includes(clean.toLowerCase()))
+  );
 }
 
 export async function searchUsersAsync(query: string): Promise<EtokUser[]> {
