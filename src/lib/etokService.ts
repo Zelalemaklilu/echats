@@ -121,6 +121,34 @@ function mapComment(row: any): EtokComment {
   };
 }
 
+async function hydrateVideos(rows: any[] | null | undefined): Promise<EtokVideo[]> {
+  const list = rows ?? [];
+  const authorIds = [...new Set(list.map(r => r.author_id).filter(Boolean))];
+  const profilesById = new Map<string, EtokUser>();
+  if (authorIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username, name, avatar_url, bio, is_online")
+      .in("id", authorIds);
+    (data ?? []).forEach(p => profilesById.set(p.id, mapUser(p)));
+  }
+  return list.map(row => ({ ...mapVideo(row), author: profilesById.get(row.author_id) }));
+}
+
+async function hydrateComments(rows: any[] | null | undefined): Promise<EtokComment[]> {
+  const list = rows ?? [];
+  const authorIds = [...new Set(list.map(r => r.author_id).filter(Boolean))];
+  const profilesById = new Map<string, EtokUser>();
+  if (authorIds.length > 0) {
+    const { data } = await supabase
+      .from("profiles")
+      .select("id, username, name, avatar_url, bio, is_online")
+      .in("id", authorIds);
+    (data ?? []).forEach(p => profilesById.set(p.id, mapUser(p)));
+  }
+  return list.map(row => ({ ...mapComment(row), author: profilesById.get(row.author_id) }));
+}
+
 /* ═══════════════════════════════════════════
    Video queries
    ═══════════════════════════════════════════ */
@@ -128,12 +156,12 @@ function mapComment(row: any): EtokComment {
 export async function fetchFYPVideos(): Promise<EtokVideo[]> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("privacy", "everyone")
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] FYP error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchFollowingVideos(userId: string): Promise<EtokVideo[]> {
@@ -147,34 +175,35 @@ export async function fetchFollowingVideos(userId: string): Promise<EtokVideo[]>
 
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .in("author_id", ids)
     .neq("privacy", "only_me")
     .order("created_at", { ascending: false })
     .limit(50);
   if (error) { console.error("[Etok] following error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchUserVideos(userId: string): Promise<EtokVideo[]> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("author_id", userId)
     .order("created_at", { ascending: false })
     .limit(100);
   if (error) { console.error("[Etok] user videos error:", error); return []; }
-  return (data ?? []).map(mapVideo);
+  return hydrateVideos(data);
 }
 
 export async function fetchVideoById(videoId: string): Promise<EtokVideo | null> {
   const { data, error } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio, is_online)")
+    .select("*")
     .eq("id", videoId)
-    .single();
+    .maybeSingle();
   if (error || !data) return null;
-  return mapVideo(data);
+  const [video] = await hydrateVideos([data]);
+  return video ?? null;
 }
 
 export function subscribeToPublicEtokVideos(onNew: (video: EtokVideo) => void) {
