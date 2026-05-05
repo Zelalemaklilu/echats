@@ -236,6 +236,7 @@ export async function checkIsLiked(userId: string, videoId: string): Promise<boo
 }
 
 export async function toggleLikeAsync(userId: string, videoId: string): Promise<boolean> {
+  if (!userId) throw new Error("Please sign in first");
   const liked = await checkIsLiked(userId, videoId);
   if (liked) {
     await supabase.from("etok_likes").delete().eq("user_id", userId).eq("video_id", videoId);
@@ -269,6 +270,8 @@ export async function checkIsFollowing(followerId: string, followingId: string):
 }
 
 export async function toggleFollowAsync(followerId: string, followingId: string): Promise<boolean> {
+  if (!followerId) throw new Error("Please sign in first");
+  if (followerId === followingId) return true;
   const isFollow = await checkIsFollowing(followerId, followingId);
   if (isFollow) {
     await supabase.from("etok_follows").delete().eq("follower_id", followerId).eq("following_id", followingId);
@@ -322,6 +325,7 @@ export async function fetchReplies(parentId: string): Promise<EtokComment[]> {
 }
 
 export async function addCommentAsync(videoId: string, authorId: string, text: string, parentId?: string): Promise<EtokComment | null> {
+  if (!authorId) throw new Error("Please sign in first");
   const { data, error } = await supabase
     .from("etok_comments")
     .insert({ video_id: videoId, author_id: authorId, text, parent_id: parentId ?? null })
@@ -346,11 +350,24 @@ export async function deleteCommentAsync(commentId: string): Promise<void> {
    ═══════════════════════════════════════════ */
 
 export async function fetchEtokProfile(userId: string): Promise<EtokUser | null> {
+  if (!userId) return null;
   const { data } = await supabase
     .from("profiles")
     .select("id, username, name, avatar_url, bio, is_online")
     .eq("id", userId)
     .single();
+  return data ? mapUser(data) : null;
+}
+
+export async function updateEtokProfileAsync(userId: string, updates: { name: string; username: string; bio: string }): Promise<EtokUser | null> {
+  if (!userId) throw new Error("Please sign in first");
+  const { data, error } = await supabase
+    .from("profiles")
+    .update({ name: updates.name.trim(), username: updates.username.trim(), bio: updates.bio.trim(), updated_at: new Date().toISOString() })
+    .eq("id", userId)
+    .select("id, username, name, avatar_url, bio, is_online")
+    .single();
+  if (error) throw new Error(error.message || "Profile update failed");
   return data ? mapUser(data) : null;
 }
 
@@ -367,15 +384,22 @@ export async function fetchTotalVideoLikes(userId: string): Promise<number> {
    ═══════════════════════════════════════════ */
 
 export async function searchVideosAsync(query: string): Promise<EtokVideo[]> {
-  const q = `%${query}%`;
+  const clean = query.trim().replace(/^#/, "");
+  if (!clean) return [];
+  const q = `%${clean}%`;
   const { data } = await supabase
     .from("etok_videos")
-    .select("*, profiles!etok_videos_author_id_fkey(id, username, name, avatar_url, bio)")
-    .or(`description.ilike.${q},hashtags.cs.{${query.replace(/^#/, "")}}`)
+    .select("*")
+    .or(`description.ilike.${q},sound_name.ilike.${q}`)
     .eq("privacy", "everyone")
     .order("views", { ascending: false })
     .limit(30);
-  return (data ?? []).map(mapVideo);
+  const hydrated = await hydrateVideos(data);
+  return hydrated.filter(v =>
+    v.description.toLowerCase().includes(clean.toLowerCase()) ||
+    v.soundName.toLowerCase().includes(clean.toLowerCase()) ||
+    v.hashtags.some(h => h.toLowerCase().includes(clean.toLowerCase()))
+  );
 }
 
 export async function searchUsersAsync(query: string): Promise<EtokUser[]> {
